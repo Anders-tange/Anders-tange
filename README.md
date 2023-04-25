@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @Anders-tange
-- 👀 I’m interested in learning about Javascript, Solodity and use of blockchain
+- 👀 I’m interested in learning about Javascript
 - 🌱 I’m currently learning Javascript
 - 💞️ I’m looking to collaborate on ...
 - 📫 How to reach me https://www.linkedin.com/in/anders-tange-aaab4b211/
