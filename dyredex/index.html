@@ -170,6 +170,16 @@
   .v-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .v-art .sil { font-size: 150px; }
   .sil { font-family: var(--font-emoji); filter: brightness(0); opacity: .82; line-height: 1; user-select: none; }
+  .v-mode { display: inline-flex; background: var(--lcd-2); border-radius: 8px; padding: 3px; justify-self: start; }
+  .v-mode button { border: 0; background: transparent; color: var(--lcd-ink); padding: 3px 14px; border-radius: 6px; cursor: pointer; font-family: var(--font-lcd); font-size: 19px; }
+  .v-mode button[aria-pressed="true"] { background: var(--lcd-ink); color: var(--lcd); }
+  .v3d { background: radial-gradient(circle at 50% 38%, #edf4e2, var(--lcd-2) 75%); touch-action: pan-y; position: relative; }
+  .v3d canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .v3d canvas:active { cursor: grabbing; }
+  .v3d-msg { padding: 18px; text-align: center; display: grid; gap: 10px; justify-items: center; font-size: 14px; }
+  .v3d-msg .lcdfont { font-size: 22px; }
+  .v3d-msg.busy .lcdfont { animation: blink 1.2s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
   .thumbs { display: flex; gap: 6px; overflow-x: auto; }
   .thumbs button { flex: none; width: 50px; height: 50px; padding: 0; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; background: none; }
   .thumbs button[aria-current="true"] { border-color: var(--case); }
@@ -656,6 +666,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
+    view3d: false, models: new Map(), modelJobs: new Map(),
   };
   const importKeys = new Set(), importSigs = new Set();
   const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
@@ -789,8 +800,11 @@ Sydkaper|Eubalaena australis|m|🐋`,
     const mapLink = p.geo ? ` · <a href="https://www.openstreetmap.org/?mlat=${Number(p.geo.lat)}&amp;mlon=${Number(p.geo.lon)}#map=14/${Number(p.geo.lat)}/${Number(p.geo.lon)}" target="_blank" rel="noopener">kort</a>` : "";
     const running = state.refine && state.refine.sid === p.id;
     v.innerHTML = `${head}
-      <div class="v-art"><img src="${esc(photoSrc(p))}" alt="${esc(e.name)}"></div>
-      ${sp.photos.length > 1 ? `<div class="thumbs">${sp.photos.map((ph, n) => `<button data-ph="${n}" aria-label="Billede ${n + 1}" aria-current="${n === state.photoIdx}"><img src="${esc(photoSrc(ph))}" alt=""></button>`).join("")}</div>` : ""}
+      <div class="v-mode" role="group" aria-label="Visning"><button data-view="photo" aria-pressed="${!state.view3d}">FOTO</button><button data-view="3d" aria-pressed="${state.view3d}">3D</button></div>
+      ${state.view3d
+        ? `<div class="v-art v3d" id="v3d"></div><p class="small dim" id="v3d-hint">Træk til siden for at dreje figuren${V3.tiltSeen ? " eller vip telefonen" : ""}.${state.models.has(e.key) && state.vision && !state.modelJobs.has(e.key) ? ` <button class="btn ghost sm" data-act="rebuild3d">Byg figuren igen</button>` : ""}</p>`
+        : `<div class="v-art"><img src="${esc(photoSrc(p))}" alt="${esc(e.name)}"></div>`}
+      ${!state.view3d && sp.photos.length > 1 ? `<div class="thumbs">${sp.photos.map((ph, n) => `<button data-ph="${n}" aria-label="Billede ${n + 1}" aria-current="${n === state.photoIdx}"><img src="${esc(photoSrc(ph))}" alt=""></button>`).join("")}</div>` : ""}
       <div><h2 class="v-name">${esc(e.name)}</h2><p class="v-latin">${esc(e.latin || "")}${i.nameEn ? ` · ${esc(i.nameEn)}` : ""}</p></div>
       <div class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity)}</div>
       ${vague ? `<p class="small" style="color:var(--danger)">Kun bestemt til ${esc(p.specificity || "slægt eller familie")}. Tryk "Bestem præcis art".</p>` : ""}
@@ -808,6 +822,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
         ${state.vision && !running ? `<button class="btn blue sm" data-act="refine">Bestem præcis art</button>` : ""}
         ${state.confirmDel ? `<button class="btn sm" data-act="del-yes">Slet billedet</button><button class="btn ghost sm" data-act="del-no">Behold</button>` : `<button class="btn ghost sm" data-act="del">Slet billede</button>`}
       </div>` : ""}`;
+    if (state.view3d) mount3D(e);
   }
 
   function refineHtml(p) {
@@ -840,6 +855,195 @@ Sydkaper|Eubalaena australis|m|🐋`,
       const r = $("#viewer").getBoundingClientRect();
       if (r.top < 0 || r.top > innerHeight * 0.6) $("#viewer").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     }
+  }
+
+  /* ---------- 3D figures: AI builds each species from simple shapes, three.js draws it ---------- */
+  const V3 = { renderer: null, scene: null, camera: null, pivot: null, key: null, parts: null, yaw: 0.7, pitch: 0.28, drag: null, tilt: null, tiltSeen: false, raf: 0, last: 0, height: 1 };
+  let threeP = null;
+  function loadThree() {
+    if (window.THREE) return Promise.resolve(window.THREE);
+    return threeP || (threeP = new Promise((res, rej) => {
+      const sc = document.createElement("script");
+      sc.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+      sc.onload = () => window.THREE ? res(window.THREE) : rej(new Error("three"));
+      sc.onerror = () => { threeP = null; rej(new Error("three")); };
+      document.head.append(sc);
+    }));
+  }
+
+  function modelPrompt(e) {
+    return `Du laver 3D-figurer til en Dyredex (en Pokédex for rigtige dyr). Byg en genkendelig lavpolygon-figur af ${e.name} (${e.latin || "?"}) af simple geometriske former.
+Billedet viser brugerens eget fund af dyret: brug dets farver, mønstre og proportioner.
+
+Koordinater: y er op, og gulvet er y=0. Dyret vender mod +x (hovedet ved +x, halen ved -x). z er bredden, og z=0 er dyrets midterlinje. Gør figuren ca. 2 enheder i sin største dimension.
+
+Former ("pos" er centrum, "rot" er rotation i grader om x, y og z):
+- "box": size [x, y, z] er de fulde mål
+- "ellipsoid": size [rx, ry, rz] er radierne. Brug den til krop, hoved, muskler, ører, øjne, pletter.
+- "cylinder": size [radius top, radius bund, længde]. Står lodret langs y uden rotation; rot [0,0,90] lægger den langs x.
+- "cone": size [radius, længde]. Spidsen peger op langs +y uden rotation; rot [0,0,-90] peger den mod +x.
+"mirror": true laver en spejlet kopi på den anden side (z bliver til -z). Brug det til ben, ører, øjne, vinger, klosakse, finner og edderkoppeben, og angiv kun højre side (z > 0).
+
+Regler:
+- 15-50 dele, der overlapper lidt, så figuren hænger sammen.
+- Ben og fødder når ned til y=0. Fisk, hvaler og flyvende fugle må svæve.
+- Tag de vigtigste kendetegn med: lang hals, snabel, horn, gevir, manke, striber eller pletter (flade ellipsoider lige uden på kroppen), næb, vinger, finner, hale, brod og det rigtige antal ben.
+- Øjne er små sorte ellipsoider på hovedets sider.
+- Farver skrives "#rrggbb".
+
+Svar KUN med JSON i dette format:
+{"parts":[{"shape":"ellipsoid","size":[0.6,0.35,0.3],"pos":[0,0.9,0],"rot":[0,0,0],"color":"#c8a165","mirror":false}]}`;
+  }
+
+  function cleanParts(list) {
+    if (!Array.isArray(list)) return [];
+    const n = (v, d) => { const x = Number(v); return Number.isFinite(x) ? Math.max(-50, Math.min(50, x)) : d; };
+    const v3 = (a, d) => [0, 1, 2].map(i => n(Array.isArray(a) ? a[i] : undefined, d));
+    return list.slice(0, 80).filter(x => x && typeof x === "object").map(x => ({
+      shape: ["box", "ellipsoid", "cylinder", "cone"].includes(x.shape) ? x.shape : "ellipsoid",
+      size: v3(x.size, 0.2).map(v => Math.max(0.005, Math.abs(v))),
+      pos: v3(x.pos, 0), rot: v3(x.rot, 0),
+      color: /^#[0-9a-f]{6}$/i.test(String(x.color)) ? String(x.color) : "#9a9a9a",
+      mirror: !!x.mirror,
+    }));
+  }
+
+  async function buildModel3D(e) {
+    const key = e.key;
+    if (state.modelJobs.get(key)?.status === "running" || !e.sp) return;
+    state.modelJobs.set(key, { status: "running" });
+    if (state.selected === key) renderViewer();
+    try {
+      const photo = e.sp.photos[0];
+      const blob = await fetch(photoSrc(photo)).then(r => { if (!r.ok) throw { code: "fetch" }; return r.blob(); }, () => { throw { code: "fetch" }; });
+      const r = await state.sample.json(modelPrompt(e), { images: [blob], modelTier: "complex", cache: false });
+      const parts = cleanParts(r?.parts);
+      if (parts.length < 4) throw { code: "bad_model" };
+      if (state.db) await state.db.collection("models").doc(key).set({ parts, name: e.name, createdAt: Date.now() });
+      state.models.set(key, parts);
+      state.modelJobs.delete(key);
+    } catch (err) {
+      if (DISABLED.includes(err?.code)) state.vision = false;
+      state.modelJobs.set(key, { status: "error", error: err?.code === "fetch" ? "Billedet kunne ikke hentes." : err?.code === "bad_model" ? "AI'en lavede ikke en brugbar figur. Prøv igen." : aiError(err?.code) });
+    }
+    if (state.selected === key && state.view3d) renderViewer();
+  }
+
+  function v3dMessage(box, html, busy) { box.innerHTML = `<div class="v3d-msg${busy ? " busy" : ""}">${html}</div>`; }
+
+  async function mount3D(e) {
+    const box = $("#v3d");
+    if (!box) return;
+    const parts = state.models.get(e.key);
+    const job = state.modelJobs.get(e.key);
+    if (job?.status === "running") return v3dMessage(box, `<span class="lcdfont">BYGGER 3D-FIGUR…</span><span>AI'en former ${esc(e.name)} ud fra dit billede. Det kan tage op til et minut.</span>`, true);
+    if (job?.status === "error") return v3dMessage(box, `<span>${esc(job.error)}</span>${state.vision ? `<button class="btn sm" data-act="build3d">Prøv igen</button>` : ""}`);
+    if (!parts) return v3dMessage(box, state.vision
+      ? `<span class="lcdfont">INGEN 3D-FIGUR ENDNU</span><span>AI'en kan bygge en figur af ${esc(e.name)} ud fra dit billede.</span><button class="btn sm" data-act="build3d">Byg 3D-figur</button>`
+      : `<span>3D-figurer kræver AI, som ikke er tilgængelig her.</span>`);
+    let T;
+    try { T = await loadThree(); } catch { return v3dMessage(box, "<span>3D-visningen kunne ikke indlæses. Prøv at genindlæse siden.</span>"); }
+    if (!box.isConnected) return;
+    try { ensureRenderer(T); } catch { return v3dMessage(box, "<span>Din browser kan ikke vise 3D.</span>"); }
+    setModel(T, e.key, parts);
+    box.innerHTML = "";
+    box.append(V3.renderer.domElement);
+    if (!V3.raf) V3.raf = requestAnimationFrame(loop3D);
+  }
+
+  function ensureRenderer(T) {
+    if (V3.renderer) return;
+    const r = new T.WebGLRenderer({ antialias: true, alpha: true });
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    r.outputEncoding = T.sRGBEncoding;
+    V3.renderer = r;
+    V3.scene = new T.Scene();
+    V3.camera = new T.PerspectiveCamera(30, 1, 0.1, 100);
+    V3.scene.add(new T.HemisphereLight(0xffffff, 0x3c4a32, 0.95));
+    const sun = new T.DirectionalLight(0xffffff, 0.8);
+    sun.position.set(3, 5, 4);
+    V3.scene.add(sun);
+    const shadow = new T.Mesh(new T.CircleGeometry(1.2, 40), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.16 }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.002;
+    V3.scene.add(shadow);
+    const c = r.domElement;
+    c.setAttribute("aria-label", "3D-figur. Træk til siden for at dreje.");
+    c.addEventListener("pointerdown", ev => { V3.drag = { x: ev.clientX, y: ev.clientY, id: ev.pointerId }; });
+    c.addEventListener("pointermove", ev => {
+      if (!V3.drag || V3.drag.id !== ev.pointerId) return;
+      V3.yaw += (ev.clientX - V3.drag.x) * 0.012;
+      if (ev.pointerType === "mouse") V3.pitch = Math.max(-0.15, Math.min(1.1, V3.pitch + (ev.clientY - V3.drag.y) * 0.006));
+      V3.drag.x = ev.clientX; V3.drag.y = ev.clientY;
+    });
+    const end = () => { V3.drag = null; };
+    c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end); c.addEventListener("pointerleave", end);
+  }
+
+  function setModel(T, key, parts) {
+    if (V3.key === key && V3.parts === parts) return;
+    if (V3.pivot) {
+      V3.scene.remove(V3.pivot);
+      V3.pivot.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    }
+    const inner = new T.Group();
+    const deg = Math.PI / 180;
+    const add = (pt, flip) => {
+      const [a, b, c] = pt.size;
+      let geo;
+      if (pt.shape === "box") geo = new T.BoxGeometry(a, b, c);
+      else if (pt.shape === "cylinder") geo = new T.CylinderGeometry(a, b, c, 14);
+      else if (pt.shape === "cone") geo = new T.ConeGeometry(a, b, 14);
+      else geo = new T.SphereGeometry(1, 16, 12);
+      const mesh = new T.Mesh(geo, new T.MeshStandardMaterial({ color: pt.color, flatShading: true, roughness: 0.8, metalness: 0 }));
+      if (pt.shape === "ellipsoid") mesh.scale.set(a, b, c);
+      mesh.position.set(pt.pos[0], pt.pos[1], flip ? -pt.pos[2] : pt.pos[2]);
+      mesh.rotation.set((flip ? -1 : 1) * pt.rot[0] * deg, (flip ? -1 : 1) * pt.rot[1] * deg, pt.rot[2] * deg);
+      inner.add(mesh);
+    };
+    for (const pt of parts) { add(pt, false); if (pt.mirror && Math.abs(pt.pos[2]) > 0.001) add(pt, true); }
+    // Fit any size the AI picked: largest side 2 units, feet on the floor, centred on the turntable.
+    let bb = new T.Box3().setFromObject(inner);
+    const size = bb.getSize(new T.Vector3());
+    inner.scale.setScalar(2 / Math.max(size.x, size.y, size.z, 0.001));
+    bb = new T.Box3().setFromObject(inner);
+    const ctr = bb.getCenter(new T.Vector3());
+    inner.position.set(-ctr.x, -bb.min.y, -ctr.z);
+    V3.height = bb.max.y - bb.min.y;
+    V3.pivot = new T.Group();
+    V3.pivot.add(inner);
+    V3.scene.add(V3.pivot);
+    V3.key = key; V3.parts = parts;
+  }
+
+  const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function loop3D(t) {
+    const r = V3.renderer;
+    if (!r || !r.domElement.isConnected) { V3.raf = 0; return; }
+    V3.raf = requestAnimationFrame(loop3D);
+    const dt = Math.min(0.05, Math.max(0, (t - V3.last) / 1000)); V3.last = t;
+    if (!V3.drag && !V3.tilt && !reducedMotion()) V3.yaw += dt * 0.35;
+    const box = r.domElement.parentElement;
+    const w = Math.max(1, box.clientWidth), h = Math.max(1, box.clientHeight);
+    if (r.domElement.width !== Math.round(w * r.getPixelRatio()) || r.domElement.height !== Math.round(h * r.getPixelRatio())) {
+      r.setSize(w, h, false); V3.camera.aspect = w / h; V3.camera.updateProjectionMatrix();
+    }
+    let yaw = V3.yaw, pitch = V3.pitch;
+    if (V3.tilt) { yaw += V3.tilt.g * Math.PI / 180 * 1.6; pitch = Math.max(-0.15, Math.min(1.1, pitch + (V3.tilt.b - 45) * Math.PI / 180 * 0.8)); }
+    V3.pivot.rotation.y = yaw;
+    const dist = 5.4, ty = V3.height * 0.45;
+    V3.camera.position.set(0, ty + Math.sin(pitch) * dist, Math.cos(pitch) * dist);
+    V3.camera.lookAt(0, ty, 0);
+    r.render(V3.scene, V3.camera);
+  }
+
+  // Tilt works only where the viewer lets the page read device motion; dragging always works.
+  window.addEventListener("deviceorientation", ev => {
+    if (ev.gamma == null || ev.beta == null) return;
+    V3.tilt = { g: Math.max(-60, Math.min(60, ev.gamma)), b: Math.max(-10, Math.min(100, ev.beta)) };
+    if (!V3.tiltSeen) { V3.tiltSeen = true; const h = $("#v3d-hint"); if (h) h.firstChild.textContent = "Træk til siden for at dreje figuren eller vip telefonen."; }
+  });
+  function askTilt() {
+    try { if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch {}
   }
 
   /* ---------- achievements ---------- */
@@ -1660,6 +1864,13 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     if (ph) { state.photoIdx = Number(ph.dataset.ph); state.confirmDel = false; renderViewer(); return; }
     const act = e.target.closest("[data-act]")?.dataset.act;
     const entry = entryByKey(state.selected);
+    const vb = e.target.closest("[data-view]");
+    if (vb) {
+      state.view3d = vb.dataset.view === "3d";
+      if (state.view3d) { askTilt(); if (entry?.sp && !state.models.has(entry.key) && !state.modelJobs.has(entry.key) && state.vision) buildModel3D(entry); }
+      renderViewer(); return;
+    }
+    if (act === "build3d" || act === "rebuild3d") { if (entry?.sp) { state.modelJobs.delete(entry.key); buildModel3D(entry); } return; }
     if (act === "pick") pick();
     else if (act === "reveal") { state.revealed.add(entry.key); store.set("dyredex-revealed", [...state.revealed].join(",")); renderViewer(); renderDex(); }
     else if (act === "del") { state.confirmDel = true; renderViewer(); }
@@ -1697,6 +1908,12 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
         render();
         refreshQueueStatus();
       }, () => showNotice("Samlingen kunne ikke hentes. Genindlæs siden for at prøve igen."));
+      db.collection("models").onSnapshot(snap => {
+        const before = state.models.get(state.selected);
+        state.models = new Map(snap.docs.map(d => [d.id, cleanParts(d.data().parts)]));
+        const after = state.models.get(state.selected);
+        if (state.view3d && !before !== !after && !state.modelJobs.has(state.selected)) renderViewer();
+      }, () => {});
     }
     renderViewer();
     for (const it of state.queue) if (it.status === "ready" && !it.result && state.vision) it.status = "prep";
