@@ -171,8 +171,15 @@
   .tag.new { background: var(--dex); color: var(--dex-ink); }
   .tag.known { background: var(--line); color: var(--fg); }
   .tag.warn { background: var(--warn); color: #fff; }
-  .fields { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, .9fr); gap: 8px; }
-  @media (max-width: 760px) { .fields { grid-template-columns: minmax(0, 1fr); } }
+  .fields { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, .9fr) minmax(0, 1.1fr); gap: 8px; }
+  @media (max-width: 960px) { .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .fields { grid-template-columns: minmax(0, 1fr); } }
+  .geo { display: inline-flex; align-items: center; gap: 5px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13px; }
+  .geo::before { content: ""; width: 8px; height: 8px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: currentColor; flex: none; }
+  .geo.ok { color: var(--ok); }
+  .place-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .place-row input { flex: 1 1 240px; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+  .map-link { color: var(--screen-fg); }
   .field { display: grid; gap: 3px; min-width: 0; }
   .field label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .field input, .field select, .search input, .tools select {
@@ -340,6 +347,10 @@
       </div>
       <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
     </div>
+    <div class="place-row">
+      <label for="default-place">Sted for billeder uden GPS</label>
+      <input id="default-place" placeholder="Fx Dyrehaven, Klampenborg (valgfrit)" autocomplete="off">
+    </div>
     <div class="queue-head" id="queue-head"></div>
     <div class="queue" id="queue" aria-live="polite"></div>
   </section>
@@ -487,6 +498,8 @@
       : "";
   }
 
+  const scanningState = it => it.status === "scanning" || it.status === "prep";
+
   function itemHtml(it) {
     const d = it.draft;
     const map = species();
@@ -505,6 +518,13 @@
       const pct = Math.round(clamp(it.result.confidence, 0, 1) * 100);
       status += `<span title="Hvor sikker AI'en er">Sikkerhed <span class="conf"><i style="width:${pct}%"></i></span> ${pct}%</span>`;
     }
+    if (it.exif !== undefined && !scanningState(it)) {
+      const g = it.exif?.geo;
+      status += g
+        ? `<span class="geo ok" title="Koordinater fra billedet">GPS ${g.lat.toFixed(4)}, ${g.lon.toFixed(4)}</span>`
+        : `<span class="geo" title="Billedet har ingen GPS-data">Ingen GPS i billedet</span>`;
+      if (it.exif?.takenAt) status += `<span class="geo ok">Taget ${esc(fmtDate(it.exif.takenAt))}</span>`;
+    }
 
     const editable = it.status === "ready";
     const scanning = it.status === "scanning" || it.status === "prep";
@@ -520,7 +540,9 @@
           <div class="field"><label for="n-${it.id}">Navn</label><input class="name" id="n-${it.id}" data-k="name" value="${esc(d.name)}" placeholder="Fx Rødræv" ${editable ? "" : "disabled"}></div>
           <div class="field"><label for="l-${it.id}">Latinsk navn</label><input class="latin" id="l-${it.id}" data-k="latin" value="${esc(d.latin)}" placeholder="Fx Vulpes vulpes" ${editable ? "" : "disabled"}></div>
           <div class="field"><label for="c-${it.id}">Gruppe</label><select id="c-${it.id}" data-k="category" ${editable ? "" : "disabled"}>${catOpts}</select></div>
+          <div class="field"><label for="p-${it.id}">Sted</label><input id="p-${it.id}" data-k="place" value="${esc(d.place)}" placeholder="Hvor er billedet taget?" ${editable ? "" : "disabled"}></div>
         </div>
+        ${editable && !it.exif?.geo && d.place && state.vision && it.scannedPlace !== d.place ? `<p class="desc" style="color:var(--muted)">Tryk Scan igen, hvis AI'en skal bruge stedet til at genkende dyret.</p>` : ""}
         ${alts.length ? `<div class="alts"><span>Eller måske:</span>${alts.map((a, i) => `<button data-alt="${i}">${esc(a.name)}</button>`).join("")}</div>` : ""}
         ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
         ${it.error ? `<p class="err">${esc(it.error)}</p>` : ""}
@@ -560,6 +582,62 @@
     }
   }
 
+  // Reads GPS position and capture time from the original file's EXIF block (JPEG and WebP).
+  // The resized copy loses all metadata, so this must run on the file the user picked.
+  async function readExif(file) {
+    try {
+      const v = new DataView(await file.slice(0, 1024 * 1024).arrayBuffer());
+      let tiff = -1;
+      if (v.getUint16(0) === 0xFFD8) {
+        let o = 2;
+        while (o + 10 <= v.byteLength) {
+          const m = v.getUint16(o);
+          if ((m & 0xFF00) !== 0xFF00 || m === 0xFFDA) break;
+          if (m === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) { tiff = o + 10; break; }
+          o += 2 + v.getUint16(o + 2);
+        }
+      } else if (v.getUint32(0) === 0x52494646 && v.getUint32(8) === 0x57454250) {
+        let o = 12;
+        while (o + 8 <= v.byteLength) {
+          const size = v.getUint32(o + 4, true);
+          if (v.getUint32(o) === 0x45584946) { tiff = o + 8; if (v.getUint32(tiff) === 0x45786966) tiff += 6; break; }
+          o += 8 + size + (size & 1);
+        }
+      }
+      if (tiff < 0) return null;
+      const le = v.getUint16(tiff) === 0x4949;
+      const u16 = p => v.getUint16(p, le), u32 = p => v.getUint32(p, le);
+      const SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+      const ifd = start => {
+        const out = {};
+        for (let i = 0, n = u16(start); i < n; i++) { const e = start + 2 + i * 12; out[u16(e)] = { type: u16(e + 2), count: u32(e + 4), at: e + 8 }; }
+        return out;
+      };
+      const where = t => (SIZES[t.type] || 1) * t.count <= 4 ? t.at : tiff + u32(t.at);
+      const ascii = t => { let s = ""; const p = where(t); for (let i = 0; i < t.count; i++) { const c = v.getUint8(p + i); if (!c) break; s += String.fromCharCode(c); } return s; };
+      const rats = t => { const p = where(t), r = []; for (let i = 0; i < t.count; i++) r.push(u32(p + i * 8) / (u32(p + i * 8 + 4) || 1)); return r; };
+      const ifd0 = ifd(tiff + u32(tiff + 4));
+      const res = { geo: null, takenAt: null };
+      let date = "";
+      if (ifd0[0x8769]) { const ex = ifd(tiff + u32(ifd0[0x8769].at)); const t = ex[0x9003] || ex[0x9004]; if (t) date = ascii(t); }
+      if (!date && ifd0[0x0132]) date = ascii(ifd0[0x0132]);
+      const m = date.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})/);
+      if (m) res.takenAt = new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]).getTime() || null;
+      if (ifd0[0x8825]) {
+        const g = ifd(tiff + u32(ifd0[0x8825].at));
+        if (g[2] && g[4]) {
+          const deg = r => r[0] + (r[1] || 0) / 60 + (r[2] || 0) / 3600;
+          let lat = deg(rats(g[2])), lon = deg(rats(g[4]));
+          if (g[1] && ascii(g[1]).startsWith("S")) lat = -lat;
+          if (g[3] && ascii(g[3]).startsWith("W")) lon = -lon;
+          if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && (lat || lon))
+            res.geo = { lat: +lat.toFixed(5), lon: +lon.toFixed(5) };
+        }
+      }
+      return res;
+    } catch { return null; }
+  }
+
   async function compress(file) {
     const url = URL.createObjectURL(file);
     try {
@@ -579,7 +657,7 @@
     let added = 0;
     for (const f of files) {
       if (!f || !/^image\//.test(f.type || "")) continue;
-      const it = { id: ++uid, file: f, url: URL.createObjectURL(f), status: "prep", draft: { name: "", latin: "", category: "andet" } };
+      const it = { id: ++uid, file: f, url: URL.createObjectURL(f), status: "prep", draft: { name: "", latin: "", category: "andet", place: "" } };
       state.queue.push(it);
       renderItem(it);
       added++;
@@ -598,12 +676,17 @@
     } finally { pumping = false; renderQueueHead(); }
   }
 
-  function buildPrompt() {
+  function buildPrompt(it) {
+    const g = it.exif?.geo;
+    const ctx = [];
+    if (g) ctx.push(`Billedet er taget ved GPS-koordinaterne ${g.lat}, ${g.lon}.`);
+    else if (it.draft.place) ctx.push(`Brugeren oplyser, at billedet er taget her: ${it.draft.place}.`);
+    if (it.exif?.takenAt) ctx.push(`Det er taget ${fmtDate(it.exif.takenAt)}, så tænk på årstiden.`);
     const caught = [...species().values()].map(sp => `- ${sp.info.name} (${sp.info.latin || "?"})`).join("\n");
     return `Du er motoren i en "Dyredex": en Pokédex for rigtige dyr, som brugeren selv har fotograferet.
 Se på billedet og identificér det dyr, der er hovedmotivet. Vær så præcis som muligt (art, ellers slægt/familie).
 Hvis der er flere dyr, så vælg det mest fremtrædende. Husdyr, kæledyr og dyr i zoo tæller også.
-
+${ctx.length ? `\n${ctx.join(" ")}\nBrug sted og tidspunkt til at vurdere, hvilke arter der realistisk lever der (fx underarter og lignende arter), men stol mest på billedet: dyr i zoo, akvarier og hjem kan være eksotiske.\n` : ""}
 Svar KUN med ét JSON-objekt i præcis dette format:
 {
   "isAnimal": true,
@@ -612,13 +695,14 @@ Svar KUN med ét JSON-objekt i præcis dette format:
   "latin": "videnskabeligt navn, fx Vulpes vulpes",
   "category": en af ${JSON.stringify(CATS.map(c => c.id))},
   "types": 1-2 værdier fra ${JSON.stringify(TYPES)} der passer til hvor dyret lever,
-  "rarity": en af ${JSON.stringify(RARITY)} (hvor svært det er at møde dyret; husdyr og almindelige byfugle er "almindelig"),
+  "rarity": en af ${JSON.stringify(RARITY)} (hvor svært det er at møde dyret${ctx.length ? " der hvor billedet er taget" : ""}; husdyr og almindelige byfugle er "almindelig"),
   "confidence": tal mellem 0 og 1 for hvor sikker du er,
   "alternatives": op til 3 objekter {"name": "...", "latin": "..."} med andre arter det kunne være, hvis du er i tvivl (ellers []),
   "description": "2 korte sætninger på dansk i Pokédex-stil om dyret",
   "funFact": "1 overraskende fakta på dansk",
   "size": "typisk størrelse/vægt, kort",
   "habitat": "hvor det lever, kort",
+  "place": ${g ? `"kort stednavn ud fra koordinaterne, fx 'Dyrehaven, Klampenborg, Danmark'"` : `""`},
   "stats": {"fart": 1-10, "styrke": 1-10, "snilde": 1-10, "nuttethed": 1-10}
 }
 Hvis der ikke er noget dyr på billedet: {"isAnimal": false}.
@@ -628,7 +712,8 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
   function applyResult(it, r) {
     it.result = r;
     it.noAnimal = !r || r.isAnimal === false;
-    if (it.noAnimal) { it.draft = { name: "", latin: "", category: "andet" }; return; }
+    const place = it.exif?.geo ? (String(r?.place || "").trim() || it.draft.place) : it.draft.place;
+    if (it.noAnimal) { it.draft = { name: "", latin: "", category: "andet", place }; return; }
     const cat = CAT[slug(r.category).replace(/-/g, "")] ? slug(r.category).replace(/-/g, "") : "andet";
     it.draft = {
       name: String(r.name || "").trim(),
@@ -643,11 +728,16 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
       habitat: String(r.habitat || "").trim(),
       stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(r.stats?.[k], 1, 10)])),
       confidence: clamp(r.confidence, 0, 1),
+      place,
     };
   }
 
   async function scanItem(it) {
     it.error = "";
+    if (it.exif === undefined) it.exif = await readExif(it.file);
+    if (!it.exif?.geo && !it.draft.place) it.draft.place = defaultPlace();
+    if (it.exif?.geo && !it.draft.place) it.draft.place = `${it.exif.geo.lat.toFixed(4)}, ${it.exif.geo.lon.toFixed(4)}`;
+    it.scannedPlace = it.draft.place;
     try { it.blob = it.blob || await compress(it.file); }
     catch {
       it.status = "ready"; it.error = "Billedet kunne ikke åbnes. Prøv et JPG eller PNG (iPhone: vælg 'Mest kompatibel' under Kamera → Formater).";
@@ -659,7 +749,7 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
     it.status = "scanning"; renderItem(it);
     it.ctl = new AbortController();
     try {
-      const r = await state.sample.json(buildPrompt(), { images: [it.blob], signal: it.ctl.signal, cache: false });
+      const r = await state.sample.json(buildPrompt(it), { images: [it.blob], signal: it.ctl.signal, cache: false });
       if (!state.queue.includes(it)) return;
       applyResult(it, r);
       it.status = "ready";
@@ -717,6 +807,7 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
       funFact: base.funFact || "", size: base.size || "", habitat: base.habitat || "",
       stats: base.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
       source: it.result && !it.noAnimal ? "ai" : "manuel", createdAt: Date.now(), assetId: null,
+      place: d.place || "", geo: it.exif?.geo || null, takenAt: it.exif?.takenAt || null,
     };
     let uploaded = null;
     try {
@@ -808,7 +899,7 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
         <div class="big"><img src="${esc(photoSrc(p))}" alt="${esc(i.name)}"></div>
         ${sp.photos.length > 1 ? `<div class="thumbs">${sp.photos.map((ph, n) => `<button data-ph="${n}" aria-label="Billede ${n + 1}" aria-current="${n === photoIdx}"><img src="${esc(photoSrc(ph))}" alt=""></button>`).join("")}</div>` : ""}
         <div class="photo-meta">
-          <span>Fanget ${esc(fmtDate(p.createdAt))}${sp.photos.length > 1 ? ` · billede ${photoIdx + 1} af ${sp.photos.length}` : ""}</span>
+          <span>${p.takenAt ? "Taget" : "Tilføjet"} ${esc(fmtDate(p.takenAt || p.createdAt))}${p.place ? ` · ${esc(p.place)}` : ""}${p.geo ? ` · <a class="map-link" href="https://www.openstreetmap.org/?mlat=${Number(p.geo.lat)}&amp;mlon=${Number(p.geo.lon)}#map=14/${Number(p.geo.lat)}/${Number(p.geo.lon)}" target="_blank" rel="noopener">Se på kort</a>` : ""}${sp.photos.length > 1 ? ` · billede ${photoIdx + 1} af ${sp.photos.length}` : ""}</span>
           ${canDelete ? (confirmDel
             ? `<span style="display:flex;gap:6px"><button class="btn danger small" data-act="del-yes">Slet billedet</button><button class="btn ghost small" data-act="del-no" style="color:var(--screen-fg)">Behold</button></span>`
             : `<button class="btn ghost small" data-act="del" style="color:var(--screen-fg);box-shadow:inset 0 0 0 1px var(--screen-line)">Slet billede</button>`) : ""}
@@ -825,7 +916,7 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
         </div>
         <div class="types">${catHtml(i.category)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity)}</div>
         ${i.description ? `<p class="entry">${esc(i.description)}</p>` : ""}
-        ${(i.size || i.habitat) ? `<dl class="facts">${i.size ? `<dt>Størrelse</dt><dd>${esc(i.size)}</dd>` : ""}${i.habitat ? `<dt>Levested</dt><dd>${esc(i.habitat)}</dd>` : ""}<dt>Sjældenhed</dt><dd>${esc(RARITY_LABEL[i.rarity] || "Almindelig")}</dd><dt>Første fund</dt><dd>${esc(fmtDate(sp.photos[0].createdAt))}</dd></dl>` : ""}
+        ${(i.size || i.habitat) ? `<dl class="facts">${i.size ? `<dt>Størrelse</dt><dd>${esc(i.size)}</dd>` : ""}${i.habitat ? `<dt>Levested</dt><dd>${esc(i.habitat)}</dd>` : ""}<dt>Sjældenhed</dt><dd>${esc(RARITY_LABEL[i.rarity] || "Almindelig")}</dd><dt>Første fund</dt><dd>${esc(fmtDate(sp.photos[0].takenAt || sp.photos[0].createdAt))}${sp.photos[0].place ? `, ${esc(sp.photos[0].place)}` : ""}</dd></dl>` : ""}
         ${i.stats ? `<div class="stats">${STATS.map(([k, label]) => { const v = clamp(i.stats[k], 0, 10); return `<div class="stat"><span>${label}</span><span class="bar"><i style="width:${v * 10}%"></i></span><b>${v}</b></div>`; }).join("")}</div>` : ""}
         ${i.funFact ? `<p class="fun"><strong>Vidste du?</strong> ${esc(i.funFact)}</p>` : ""}
       </div>
@@ -862,6 +953,9 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
   }
   function showNotice(msg) { const n = $("#notice"); n.textContent = msg; n.hidden = !msg; }
   const pick = () => $("#file").click();
+  const defaultPlace = () => $("#default-place").value.trim();
+  try { $("#default-place").value = localStorage.getItem("dyredex-place") || ""; } catch {}
+  $("#default-place").addEventListener("change", e => { try { localStorage.setItem("dyredex-place", e.target.value.trim()); } catch {} });
 
   /* ---------- events ---------- */
   const drop = $("#drop");
@@ -891,7 +985,7 @@ ${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem,
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "save") saveItem(it);
     else if (act === "discard") removeItem(it);
-    else if (act === "retry" || act === "rescan") { it.status = "prep"; it.error = ""; renderItem(it); pump(); }
+    else if (act === "retry" || act === "rescan") { readDraft(it); it.status = "prep"; it.error = ""; renderItem(it); pump(); }
   });
   $("#queue").addEventListener("input", e => {
     const el = e.target.closest(".scan"); if (!el || !e.target.dataset.k) return;
