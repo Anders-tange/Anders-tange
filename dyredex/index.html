@@ -214,7 +214,47 @@
   .dpad i { grid-area: 2 / 2; }
   .place { margin-top: 14px; display: grid; gap: 4px; font-size: 13px; }
   .place input { width: 100%; padding: 7px 10px; border-radius: 7px; border: 0; background: var(--tile); color: var(--tile-ink); }
-  #file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  #file, #albumfile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .album { margin-top: 14px; display: grid; gap: 6px; font-size: 13px; }
+  .album p { margin: 0; opacity: .9; }
+
+  .tabs { display: flex; gap: 6px; }
+  .tabs button {
+    flex: 1; border: 0; border-radius: 9px; padding: 9px 12px; cursor: pointer; font-family: var(--font-display); font-weight: 700;
+    letter-spacing: .05em; text-transform: uppercase; font-size: 15px; background: var(--case-lo); color: #fff;
+  }
+  .tabs button[aria-selected="true"] { background: var(--tile); color: var(--tile-ink); box-shadow: inset 0 -4px 0 var(--bezel-lo); }
+  .tabs .count { font-family: var(--font-lcd); font-size: 18px; font-weight: 400; letter-spacing: 0; opacity: .8; }
+
+  .badges { display: grid; gap: 18px; }
+  .b-group h3 { font-family: var(--font-lcd); font-size: 23px; font-weight: 400; letter-spacing: .04em; margin-bottom: 8px; }
+  .b-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+  .badge {
+    background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 10px; box-shadow: inset 0 -4px 0 var(--bezel-lo);
+    display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; align-items: start;
+  }
+  .b-icon {
+    width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; position: relative;
+    font-family: var(--font-emoji); font-size: 28px; background: #e2e1d9; box-shadow: inset 0 -3px 0 #cfcdc3;
+  }
+  .b-icon .sil { opacity: .3; }
+  .badge.on .b-icon { background: var(--medal, var(--yellow)); box-shadow: inset 0 -3px 0 rgb(0 0 0 / .18), 0 0 0 2px var(--tile), 0 0 0 4px var(--medal, var(--yellow)); }
+  .b-tier { position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); font-family: var(--font-lcd); font-size: 13px; line-height: 1; padding: 1px 5px; border-radius: 4px; background: var(--tile-ink); color: #fff; white-space: nowrap; }
+  .badge h4 { margin: 0; font-size: 15px; }
+  .badge p { margin: 1px 0 6px; font-size: 13px; color: var(--tile-dim); }
+  .b-prog { display: flex; gap: 8px; align-items: center; font-family: var(--font-lcd); font-size: 17px; }
+  .b-prog .meter { flex: 1; background: #dddcd3; }
+  .b-prog .meter i { background: var(--case); }
+  .badge.done .b-prog .meter i { background: var(--ok); }
+  .b-items { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .b-items li { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid #d3d1c7; color: var(--tile-dim); }
+  .b-items li.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .won { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left; width: 100%; }
+  .won .b-icon { width: 56px; height: 56px; }
+  .won h3 { font-size: 19px; }
+
+  .imp { display: grid; gap: 6px; color: var(--strip-ink); font-family: var(--font-lcd); font-size: 19px; }
+  .imp .row { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; }
 
   .right { padding: 20px; display: grid; gap: 14px; align-content: start; min-width: 0; }
   .keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
@@ -329,14 +369,25 @@
             <button class="d" data-nav="cols" aria-label="Ned">▼</button>
           </div>
         </div>
+        <div class="album">
+          <button class="btn blue" id="albumbtn">Importér fotoalbum</button>
+          <p>Vælg mange billeder på én gang. Nye arter registreres automatisk, og dyr du allerede har, springes over.</p>
+        </div>
         <div class="place">
           <label for="default-place">Sted for billeder uden GPS</label>
           <input id="default-place" placeholder="Fx Dyrehaven, Klampenborg (valgfrit)" autocomplete="off">
         </div>
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <input type="file" id="albumfile" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
       </section>
 
       <section class="right" aria-label="Dyredex">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="dex" aria-selected="true">Dyredex</button>
+          <button role="tab" data-tab="badges" aria-selected="false">Achievements <span class="count" id="badge-count"></span></button>
+        </div>
+        <div class="badges" id="badges" hidden></div>
+        <div id="view-dex" style="display:grid;gap:14px">
         <div class="keys" id="keys" role="group" aria-label="Vælg region"></div>
         <div class="stripbar" id="strip"></div>
         <div class="tools">
@@ -349,6 +400,7 @@
           <label class="toggle"><input type="checkbox" id="shownames"> Vis navne</label>
         </div>
         <div class="dex" id="dex"></div>
+        </div>
       </section>
     </div>
   </div>
@@ -425,7 +477,11 @@ Dagpåfugleøje|Aglais io|i|🦋
 Korsedderkop|Araneus diadematus|s|🕷️
 Stor husedderkop|Eratigena atrica|s|🕷️
 Vinbjergsnegl|Helix pomatia|l|🐌
-Strandkrabbe|Carcinus maenas|c|🦀`,
+Strandkrabbe|Carcinus maenas|c|🦀
+Gråsæl|Halichoerus grypus|m|🦭
+Havørn|Haliaeetus albicilla|b|🦅
+Myreløve|Myrmeleon formicarius|i|🪲
+Næsehornsbille|Oryctes nasicornis|i|🪲`,
     eu: `Ulv|Canis lupus|m|🐺
 Brunbjørn|Ursus arctos|m|🐻
 Los|Lynx lynx|m|🐈
@@ -475,7 +531,13 @@ Pantherkamæleon|Furcifer pardalis|r|🦎
 Afrikansk sporeskildpadde|Centrochelys sulcata|r|🐢
 Sort mamba|Dendroaspis polylepis|r|🐍
 Gul tykhalet skorpion|Androctonus australis|s|🦂
-Kejserskorpion|Pandinus imperator|s|🦂`,
+Kejserskorpion|Pandinus imperator|s|🦂
+Kafferbøffel|Syncerus caffer|m|🐃
+Elefantspidsmus|Elephantulus myurus|m|🐭
+Leopardskildpadde|Stigmochelys pardalis|r|🐢
+Rødnæbbet bøffelvæver|Bubalornis niger|b|🐦
+Marabustork|Leptoptilos crumenifer|b|🦩
+Hvidrygget grib|Gyps africanus|b|🦅`,
     as: `Tiger|Panthera tigris|m|🐅
 Kæmpepanda|Ailuropoda melanoleuca|m|🐼
 Rød panda|Ailurus fulgens|m|🦝
@@ -576,7 +638,8 @@ Klovnfisk|Amphiprion ocellaris|f|🐠
 Perlekuglefisk|Arothron meleagris|f|🐡
 Almindelig ottearmet blæksprutte|Octopus vulgaris|l|🐙
 Europæisk hummer|Homarus gammarus|c|🦞
-Almindelig søstjerne|Asterias rubens|o|⭐`,
+Almindelig søstjerne|Asterias rubens|o|⭐
+Sydkaper|Eubalaena australis|m|🐋`,
   };
   const CATALOG = [];
   for (const r of REGIONS) for (const line of RAW[r.id].trim().split("\n")) {
@@ -592,7 +655,11 @@ Almindelig søstjerne|Asterias rubens|o|⭐`,
     revealed: new Set((store.get("dyredex-revealed") || "").split(",").filter(Boolean)),
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
+    tab: "dex", loaded: false, import: null, pendingBadges: [],
   };
+  const importKeys = new Set(), importSigs = new Set();
+  const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
+  const urlOf = it => it.url || (it.url = URL.createObjectURL(it.file));
   const memUrls = new Map();
   let uid = 0;
 
@@ -649,7 +716,8 @@ Almindelig søstjerne|Asterias rubens|o|⭐`,
     DEX = buildDex();
     if (state.pendingSelect && entryByKey(state.pendingSelect)) { state.selected = state.pendingSelect; state.pendingSelect = null; state.photoIdx = 0; }
     if (!state.selected || !entryByKey(state.selected)) state.selected = (DEX.find(e => e.sp) || DEX[0]).key;
-    renderCounter(); renderKeys(); renderStrip(); renderDex(); renderViewer();
+    renderCounter(); renderKeys(); renderStrip(); renderDex(); renderViewer(); renderBadges();
+    checkBadges();
   }
 
   function renderCounter() {
@@ -772,6 +840,174 @@ Almindelig søstjerne|Asterias rubens|o|⭐`,
       const r = $("#viewer").getBoundingClientRect();
       if (r.top < 0 || r.top > innerHeight * 0.6) $("#viewer").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     }
+  }
+
+  /* ---------- achievements ---------- */
+  const genusOf = latin => String(latin || "").trim().split(/\s+/)[0].toLowerCase();
+  const want = (label, latin, genera) => ({ label, latin: (latin || []).map(x => x.toLowerCase()), genera: (genera || []).map(x => x.toLowerCase()) });
+  const BIG5 = [
+    want("Løve", ["Panthera leo"]), want("Leopard", ["Panthera pardus"]), want("Afrikansk elefant", [], ["Loxodonta"]),
+    want("Næsehorn", [], ["Diceros", "Ceratotherium"]), want("Kafferbøffel", ["Syncerus caffer"]),
+  ];
+  const LEO = want("Leopard", ["Panthera pardus"]);
+  const hourOf = ms => new Date(ms).getHours();
+  const dayOf = ms => { const d = new Date(ms); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+  const SEASONS = [["Forår", [2, 3, 4]], ["Sommer", [5, 6, 7]], ["Efterår", [8, 9, 10]], ["Vinter", [11, 0, 1]]];
+  function km(a, b) {
+    const R = 6371, r = x => x * Math.PI / 180;
+    const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lon - a.lon) / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  const setOf = (id, icon, name, desc, items) => ({ id, icon, name, desc, items });
+  const countOf = (id, icon, name, desc, tiers, value, unit) => ({ id, icon, name, desc, tiers, value, unit });
+  const ACH = [
+    { group: "Big-sæt", list: [
+      setOf("big5", "🦁", "Big 5", "De fem store fra den afrikanske savanne.", BIG5),
+      setOf("big7", "🐋", "Big 7", "Big 5 plus de to kæmper i havet ud for Sydafrika.", [...BIG5, want("Hvidhaj", ["Carcharodon carcharias"]), want("Sydkaper", [], ["Eubalaena"])]),
+      setOf("little5", "🐞", "Little 5", "De små dyr opkaldt efter Big 5. Svære at få øje på.", [
+        want("Elefantspidsmus", [], ["Elephantulus", "Macroscelides", "Rhynchocyon", "Petrodromus", "Petrosaltator", "Galegeeska"]),
+        want("Myreløve", [], ["Myrmeleon", "Euroleon", "Palpares", "Hagenomyia", "Distoleon", "Macroleon"]),
+        want("Næsehornsbille", [], ["Oryctes", "Dynastes", "Xylotrupes", "Augosoma", "Megasoma", "Golofa"]),
+        want("Leopardskildpadde", ["Stigmochelys pardalis"]), want("Bøffelvæver", [], ["Bubalornis", "Dinemellia"])]),
+      setOf("ugly5", "🐗", "Ugly 5", "Savannens fem mindst kønne. Elsk dem alligevel.", [
+        want("Hyæne", [], ["Crocuta", "Hyaena", "Parahyaena"]), want("Vortesvin", [], ["Phacochoerus"]), want("Gnu", [], ["Connochaetes"]),
+        want("Marabustork", ["Leptoptilos crumenifer"]), want("Grib", [], ["Gyps", "Torgos", "Trigonoceps", "Necrosyrtes", "Aegypius", "Neophron", "Gypaetus", "Gypohierax"])]),
+      setOf("dk5", "🦌", "Danmarks Big 5", "De store danske naturoplevelser.", [
+        want("Krondyr", ["Cervus elaphus"]), want("Sæl", ["Phoca vitulina", "Halichoerus grypus"]), want("Marsvin", ["Phocoena phocoena"]),
+        want("Havørn", ["Haliaeetus albicilla"]), want("Odder", ["Lutra lutra"])]),
+    ] },
+    { group: "Dyregrupper", list: [
+      setOf("cats", "🐅", "Kattekongen", "Alle otte store kattedyr.", [want("Løve", ["Panthera leo"]), want("Tiger", ["Panthera tigris"]), LEO,
+        want("Gepard", ["Acinonyx jubatus"]), want("Jaguar", ["Panthera onca"]), want("Puma", ["Puma concolor"]), want("Sneleopard", ["Panthera uncia"]), want("Los", [], ["Lynx"])]),
+      setOf("apes", "🦍", "Menneskeaber", "Vores nærmeste slægtninge.", [want("Gorilla", [], ["Gorilla"]), want("Chimpanse", [], ["Pan"]),
+        want("Borneo-orangutang", ["Pongo pygmaeus"]), want("Sumatra-orangutang", ["Pongo abelii"])]),
+      setOf("bears", "🐻", "Bjørnejæger", "Alle bjørnene i Dyredex'en.", [want("Brunbjørn", ["Ursus arctos"]), want("Sortbjørn", ["Ursus americanus"]),
+        want("Isbjørn", ["Ursus maritimus"]), want("Malajbjørn", ["Helarctos malayanus"]), want("Kæmpepanda", ["Ailuropoda melanoleuca"])]),
+      setOf("giants", "🐘", "Kæmpernes klub", "De største dyr på land og i havet.", [want("Elefant", [], ["Loxodonta", "Elephas"]), want("Giraf", [], ["Giraffa"]),
+        want("Næsehorn", [], ["Diceros", "Ceratotherium", "Rhinoceros", "Dicerorhinus"]), want("Blåhval", ["Balaenoptera musculus"]), want("Hvalhaj", ["Rhincodon typus"])]),
+      setOf("fossils", "🦖", "Levende fossiler", "Dyr hvis slægt næsten ikke har ændret sig i millioner af år.", [want("Næbdyr", ["Ornithorhynchus anatinus"]),
+        want("Gavial", ["Gavialis gangeticus"]), want("Krokodille", [], ["Crocodylus", "Alligator", "Caiman"]), want("Kæmpeskildpadde", [], ["Chelonoidis", "Aldabrachelys"])]),
+      countOf("scorp", "🦂", "Skorpionjæger", "Forskellige skorpioner.", [1, 3, 5], c => c.caught.filter(e => /skorpion|scorpion/i.test(`${e.name} ${e.sp.info.nameEn || ""}`)).length),
+      countOf("peng", "🐧", "Pingvinparade", "Tre forskellige pingviner.", [3], c => c.caught.filter(e => /pingvin|penguin/i.test(`${e.name} ${e.sp.info.nameEn || ""}`)).length),
+    ] },
+    { group: "Regioner", list: [
+      ...REGIONS.map(r => ({ id: "reg-" + r.id, icon: { dk: "🌳", eu: "🏔️", af: "🌍", as: "🌏", na: "🌎", sa: "🌴", au: "🦘", hav: "🌊" }[r.id], name: r.label,
+        desc: "Fang 25 %, 50 % og alle regionens dyr.", region: r.id })),
+      { id: "world", icon: "🗺️", name: "Verdensborger", desc: "Mindst ét dyr fra hver region.", itemsFn: c => REGIONS.map(r => ({ label: r.label, done: c.caught.some(e => e.region === r.id) })) },
+    ] },
+    { group: "Rejser og tid", list: [
+      countOf("globe", "✈️", "Globetrotter", "To fund mere end 1.000 km fra hinanden.", [1000], c => c.maxKm, "km"),
+      countOf("local", "🏡", "Lokalpatriot", "10 forskellige arter fundet samme sted.", [10], c => c.bestPlace),
+      countOf("night", "🦉", "Natugle", "Billeder taget mellem kl. 22 og 4.", [5], c => c.timed.filter(p => { const h = hourOf(p.takenAt); return h >= 22 || h < 4; }).length),
+      countOf("dawn", "🌅", "Morgenfrisk", "Et billede taget mellem kl. 4 og 6.", [1], c => c.timed.filter(p => { const h = hourOf(p.takenAt); return h >= 4 && h < 6; }).length),
+      { id: "seasons", icon: "🍂", name: "Alle årstider", desc: "Fund i alle fire årstider.", itemsFn: c => SEASONS.map(([label, months]) => ({ label, done: c.timed.some(p => months.includes(new Date(p.takenAt).getMonth())) })) },
+      countOf("safari", "🚙", "Safaridag", "Forskellige arter fotograferet samme dag.", [10], c => c.bestDay),
+      countOf("xmas", "🎄", "Juledyr", "Et dyr fotograferet juleaften.", [1], c => c.timed.filter(p => { const d = new Date(p.takenAt); return d.getMonth() === 11 && d.getDate() === 24; }).length),
+    ] },
+    { group: "Samling", list: [
+      countOf("collector", "📘", "Samler", "Arter i din Dyredex.", [10, 50, 100], c => c.caught.length),
+      countOf("paparazzi", "📸", "Paparazzi", "Billeder i alt.", [25, 100, 250], c => c.photos.length),
+      countOf("legend", "💎", "Legendarisk", "Fang et legendarisk dyr.", [1], c => c.caught.filter(e => e.sp.info.rarity === "legendarisk").length),
+      countOf("rare", "💠", "Sjældenhedsjæger", "Sjældne og legendariske arter.", [3, 10, 25], c => c.caught.filter(e => ["sjælden", "legendarisk"].includes(e.sp.info.rarity)).length),
+      countOf("explorer", "🧭", "Opdagelsesrejsende", "Bonusdyr uden for kataloget.", [1, 5, 10], c => c.caught.filter(e => e.bonus).length),
+    ] },
+    { group: "Sjove", list: [
+      countOf("spiders", "🕷️", "Ikke bange for edderkopper", "Forskellige edderkoppedyr.", [5], c => c.caught.filter(e => e.cat === "edderkoppedyr").length),
+      countOf("poison", "☠️", "Giftskabet", "Dyr af typen Gift.", [5], c => c.caught.filter(e => (e.sp.info.types || []).includes("Gift")).length),
+      countOf("cute", "🥰", "Nuttethed 10/10", "Et dyr med maksimal nuttethed.", [1], c => c.caught.filter(e => Number(e.sp.info.stats?.nuttethed) >= 10).length),
+      countOf("fast", "⚡", "Lynhurtig", "Et dyr med fart 10.", [1], c => c.caught.filter(e => Number(e.sp.info.stats?.fart) >= 10).length),
+    ] },
+  ];
+  const MEDALS = ["#cd7f32", "#c9ccd1", "#f7c843"];
+  const TIER_NAMES = ["Bronze", "Sølv", "Guld"];
+
+  function achContext() {
+    const caught = DEX.filter(e => e.sp);
+    const photos = state.sightings;
+    const timed = photos.filter(p => p.takenAt);
+    const geo = [];
+    const seen = new Set();
+    for (const p of photos) if (p.geo) { const k = `${p.geo.lat.toFixed(2)},${p.geo.lon.toFixed(2)}`; if (!seen.has(k)) { seen.add(k); geo.push(p.geo); } }
+    let maxKm = 0;
+    for (let a = 0; a < geo.length; a++) for (let b = a + 1; b < geo.length; b++) maxKm = Math.max(maxKm, km(geo[a], geo[b]));
+    const byPlace = new Map(), byDay = new Map();
+    for (const p of photos) {
+      const pk = p.geo ? `${p.geo.lat.toFixed(2)},${p.geo.lon.toFixed(2)}` : String(p.place || "").trim().toLowerCase();
+      if (pk) { if (!byPlace.has(pk)) byPlace.set(pk, new Set()); byPlace.get(pk).add(p.key); }
+      if (p.takenAt) { const dk = dayOf(p.takenAt); if (!byDay.has(dk)) byDay.set(dk, new Set()); byDay.get(dk).add(p.key); }
+    }
+    const most = m => Math.max(0, ...[...m.values()].map(x => x.size));
+    return { caught, photos, timed, maxKm: Math.round(maxKm), bestPlace: most(byPlace), bestDay: most(byDay) };
+  }
+
+  function evalAch(a, c) {
+    if (a.items) {
+      const items = a.items.map(w => {
+        const hit = c.caught.find(e => w.latin.includes(String(e.latin || "").toLowerCase()) || w.genera.includes(genusOf(e.latin)));
+        return { label: w.label, done: !!hit, who: hit?.name };
+      });
+      const value = items.filter(x => x.done).length;
+      return { value, tiers: [items.length], items };
+    }
+    if (a.itemsFn) { const items = a.itemsFn(c); return { value: items.filter(x => x.done).length, tiers: [items.length], items }; }
+    if (a.region) {
+      const list = DEX.filter(e => e.region === a.region);
+      const n = list.length;
+      return { value: list.filter(e => e.sp).length, tiers: [Math.ceil(n * .25), Math.ceil(n * .5), n] };
+    }
+    return { value: a.value(c), tiers: a.tiers, unit: a.unit };
+  }
+
+  function allAch() {
+    const c = achContext();
+    return ACH.map(g => ({ group: g.group, list: g.list.map(a => { const r = evalAch(a, c); return { ...a, ...r, level: r.tiers.filter(t => r.value >= t).length }; }) }));
+  }
+
+  function medalOf(a) {
+    if (!a.level) return "";
+    return a.tiers.length === 1 ? MEDALS[2] : MEDALS[a.level - 1 + (3 - a.tiers.length)];
+  }
+  const tierName = a => a.tiers.length > 1 && a.level ? TIER_NAMES[a.level - 1 + (3 - a.tiers.length)] : "";
+
+  function renderBadges() {
+    const groups = allAch();
+    let got = 0, total = 0;
+    for (const g of groups) for (const a of g.list) { got += a.level; total += a.tiers.length; }
+    $("#badge-count").textContent = `${got}/${total}`;
+    const el = $("#badges");
+    if (state.tab !== "badges") return;
+    el.innerHTML = groups.map(g => `<section class="b-group"><h3>${esc(g.group.toUpperCase())}</h3><div class="b-grid">${g.list.map(a => {
+      const next = a.tiers.find(t => a.value < t) ?? a.tiers[a.tiers.length - 1];
+      const pct = Math.min(100, a.value / next * 100);
+      const done = a.level === a.tiers.length;
+      const unit = a.unit ? ` ${a.unit}` : "";
+      return `<article class="badge${a.level ? " on" : ""}${done ? " done" : ""}" ${a.level ? `style="--medal:${medalOf(a)}"` : ""}>
+        <div class="b-icon"><span class="${a.level ? "" : "sil"}" aria-hidden="true">${a.icon}</span>${tierName(a) ? `<span class="b-tier">${tierName(a).toUpperCase()}</span>` : ""}</div>
+        <div style="min-width:0">
+          <h4>${esc(a.name)}</h4>
+          <p>${esc(a.desc)}</p>
+          <div class="b-prog"><span class="meter"><i style="width:${pct}%"></i></span><span>${Math.min(a.value, next)}${unit}/${next}${unit}</span></div>
+          ${a.items ? `<ul class="b-items">${a.items.map(x => `<li class="${x.done ? "done" : ""}" ${x.who && x.who !== x.label ? `title="${esc(x.who)}"` : ""}>${esc(x.label)}</li>`).join("")}</ul>` : ""}
+        </div>
+      </article>`;
+    }).join("")}</div></section>`).join("");
+  }
+
+  // Celebrates badges that became unlocked since this browser last looked, once the collection has loaded.
+  function checkBadges() {
+    if (!state.loaded) return;
+    const cur = [];
+    const byId = {};
+    for (const g of allAch()) for (const a of g.list) { byId[a.id] = a; for (let l = 1; l <= a.level; l++) cur.push(`${a.id}:${l}`); }
+    const raw = store.get("dyredex-badges");
+    store.set("dyredex-badges", cur.join(","));
+    if (raw === null) return;
+    const before = new Set(raw.split(",").filter(Boolean));
+    const fresh = cur.filter(k => !before.has(k)).map(k => byId[k.split(":")[0]]);
+    const unique = [...new Map(fresh.map(a => [a.id, a])).values()];
+    if (!unique.length) return;
+    if (state.import && !state.import.finished) state.pendingBadges.push(...unique);
+    else celebrateBadges(unique);
   }
 
   /* ---------- EXIF: GPS position and capture time, read from the original file ---------- */
@@ -916,18 +1152,31 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   }
 
   /* ---------- scanning queue ---------- */
-  const scanningState = it => it.status === "scanning" || it.status === "prep";
+  const scanningState = it => ["scanning", "prep", "starting"].includes(it.status);
 
   function renderTrayHead() {
-    const ready = state.queue.filter(i => i.status === "ready").length;
+    const shown = state.queue.filter(i => !i.hidden);
+    const ready = shown.filter(i => i.status === "ready").length;
     const busy = state.queue.some(scanningState);
+    const imp = state.import;
     $("#lens").classList.toggle("busy", busy);
-    $("#tray").hidden = !state.queue.length;
-    $("#tray-head").innerHTML = state.queue.length
-      ? `<span class="grow">SCANNER · ${state.queue.length} ${state.queue.length === 1 ? "BILLEDE" : "BILLEDER"}${busy ? " · ANALYSERER…" : ""}</span>` +
-        (ready > 1 ? `<button class="btn sm" data-act="save-all">Registrér alle ${ready}</button>` : "") +
-        (state.queue.length > 1 ? `<button class="btn ghost-dark sm" data-act="clear">Ryd</button>` : "")
-      : "";
+    $("#tray").hidden = !shown.length && !imp;
+    let html = "";
+    if (imp) {
+      const pct = imp.total ? imp.done / imp.total * 100 : 0;
+      html += `<div class="imp" style="flex-basis:100%">
+        <div class="row"><span>ALBUM-IMPORT ${imp.done}/${imp.total}${imp.finished ? " · FÆRDIG" : imp.paused ? " · PAUSE" : " · SCANNER…"}</span>
+          ${imp.paused && !imp.finished ? `<button class="btn sm" data-act="imp-resume">Fortsæt import</button>` : ""}
+          ${imp.finished ? `<button class="btn ghost-dark sm" data-act="imp-close">Luk</button>` : `<button class="btn ghost-dark sm" data-act="imp-stop">Stop import</button>`}</div>
+        <span class="meter"><i style="width:${pct}%"></i></span>
+        <div class="row"><span>${imp.added.length} NYE ARTER</span><span>${imp.skipped} KENDTE SPRUNGET OVER</span>${imp.dupes ? `<span>${imp.dupes} ALLEREDE IMPORTERET</span>` : ""}<span>${imp.none} UDEN DYR</span><span>${imp.review} TIL GENNEMSYN</span></div>
+        ${imp.paused && !imp.finished ? `<span style="font-size:17px;opacity:.85">Du har scannet mange billeder på kort tid. Vent et par minutter, og tryk så Fortsæt import.</span>` : ""}
+      </div>`;
+    }
+    if (shown.length) html += `<span class="grow">${imp ? "TIL GENNEMSYN" : "SCANNER"} · ${shown.length} ${shown.length === 1 ? "BILLEDE" : "BILLEDER"}${busy && !imp ? " · ANALYSERER…" : ""}</span>` +
+      (ready > 1 ? `<button class="btn sm" data-act="save-all">Registrér alle ${ready}</button>` : "") +
+      (shown.length > 1 ? `<button class="btn ghost-dark sm" data-act="clear">Ryd</button>` : "");
+    $("#tray-head").innerHTML = html;
   }
 
   function statusHtml(it) {
@@ -936,7 +1185,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     const caught = key && caughtMap().has(key);
     const e = key && entryByKey(key);
     let s = "";
-    if (it.status === "prep") s = "<span>I KØ…</span>";
+    if (it.status === "prep" || it.status === "starting") s = "<span>I KØ…</span>";
     else if (it.status === "scanning") s = "<span>ANALYSERER BILLEDET…</span>";
     else if (it.status === "saving") s = "<span>GEMMER…</span>";
     else if (it.status === "paused") s = `<span class="tag warn">PAUSE</span>`;
@@ -963,7 +1212,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     const scanning = scanningState(it);
     const alts = (it.result?.alternatives || []).filter(a => a && a.name);
     const caught = caughtMap().has(keyFor(d));
-    return `<div class="shot${scanning ? " scanning" : ""}"><img src="${esc(it.url)}" alt="Dit billede"></div>
+    return `<div class="shot${scanning ? " scanning" : ""}"><img src="${esc(urlOf(it))}" alt="Dit billede"></div>
       <div class="scan-body">
         <div class="status">${statusHtml(it)}</div>
         ${scanning ? `<p class="small dim">AI'en kigger på billedet. Det tager typisk 5–30 sekunder.</p>
@@ -987,6 +1236,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   }
 
   function renderItem(it) {
+    if (it.hidden) { renderTrayHead(); return; }
     let el = document.getElementById("it-" + it.id);
     if (!el) {
       el = document.createElement("article");
@@ -1000,7 +1250,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     state.queue = state.queue.filter(i => i !== it);
     it.ctl?.abort();
     document.getElementById("it-" + it.id)?.remove();
-    if (!keepUrl) URL.revokeObjectURL(it.url);
+    if (!keepUrl && it.url) URL.revokeObjectURL(it.url);
     renderTrayHead();
   }
   function refreshQueueStatus() {
@@ -1010,29 +1260,76 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     }
   }
 
-  function addFiles(files) {
+  function addFiles(files, auto) {
     if (!state.canAdd) { toast("Kun ejeren af denne Dyredex kan registrere dyr"); return; }
-    let added = 0;
-    for (const f of files) {
-      if (!f || !/^image\//.test(f.type || "")) continue;
-      const it = { id: ++uid, file: f, url: URL.createObjectURL(f), status: "prep", draft: { name: "", latin: "", category: "andet", place: "" } };
-      state.queue.push(it); renderItem(it); added++;
+    const imgs = [...files].filter(f => f && /^image\//.test(f.type || ""));
+    if (!imgs.length) { toast("Vælg et billede (JPG, PNG, WebP eller GIF)"); return; }
+    if (auto && !state.vision) { auto = false; toast("AI-genkendelse er ikke tilgængelig, så hvert billede skal navngives"); }
+    if (auto) {
+      if (!state.import || state.import.finished) state.import = { total: 0, done: 0, added: [], skipped: 0, dupes: 0, none: 0, review: 0, paused: false, finished: false };
+      state.import.total += imgs.length;
     }
-    if (!added) toast("Vælg et billede (JPG, PNG, WebP eller GIF)");
-    else $("#tray").scrollIntoView({ block: "nearest" });
+    for (const f of imgs) {
+      const it = { id: ++uid, file: f, url: null, sig: fileSig(f), status: "prep", auto: !!auto, hidden: !!auto, draft: { name: "", latin: "", category: "andet", place: "" } };
+      state.queue.push(it); renderItem(it);
+    }
+    renderTrayHead();
+    $("#tray").scrollIntoView({ block: "nearest" });
     pump();
   }
 
-  let pumping = false;
-  async function pump() {
-    if (pumping) return;
-    pumping = true;
-    try { let it; while ((it = state.queue.find(i => i.status === "prep"))) await scanItem(it); }
-    finally { pumping = false; renderTrayHead(); }
+  // Two scans run at once; the platform queues a few more and rejects floods.
+  let active = 0;
+  function pump() {
+    while (active < 2) {
+      const it = state.queue.find(i => i.status === "prep");
+      if (!it) break;
+      active++;
+      it.status = "starting";
+      scanItem(it).catch(() => {}).finally(() => { active--; pump(); });
+    }
+    renderTrayHead();
+    finishImportIfDone();
+  }
+
+  /* ---------- album import: decides on its own when it can ---------- */
+  function autoDone(it, kind) {
+    if (state.import) { state.import[kind]++; state.import.done++; }
+    removeItem(it);
+  }
+  function toReview(it) {
+    if (!it.auto) return;
+    it.auto = false; it.hidden = false;
+    if (it.status === "starting" || it.status === "scanning") it.status = "ready";
+    if (state.import) { state.import.review++; state.import.done++; }
+    renderItem(it);
+  }
+  async function autoDecide(it) {
+    const d = it.draft, key = keyFor(d);
+    if (d.noAnimal || !d.name) return autoDone(it, "none");
+    if (caughtMap().has(key) || importKeys.has(key)) return autoDone(it, "skipped");
+    const sure = (d.confidence || 0) >= 0.75 && ["art", "underart", "race", ""].includes(d.specificity || "");
+    if (!sure) return toReview(it);
+    importKeys.add(key);
+    const cat = CATALOG_BY_KEY.get(key);
+    if (await saveItem(it, true)) {
+      if (state.import) { state.import.added.push({ key, name: cat ? cat.name : d.name }); state.import.done++; }
+    } else { importKeys.delete(key); toReview(it); }
+  }
+  function finishImportIfDone() {
+    const imp = state.import;
+    if (!imp || imp.finished || imp.done < imp.total) return;
+    imp.finished = true;
+    renderTrayHead();
+    toast(`Import færdig: ${imp.added.length} nye arter, ${imp.skipped} kendte sprunget over`);
+    const badges = [...new Map(state.pendingBadges.splice(0).map(a => [a.id, a])).values()];
+    if (imp.added.length) importSummary(imp);
+    if (badges.length) celebrateBadges(badges);
   }
 
   async function scanItem(it) {
     it.error = "";
+    if (it.auto && (importSigs.has(it.sig) || state.sightings.some(x => x.fileSig === it.sig))) { autoDone(it, "dupes"); return; }
     if (it.exif === undefined) it.exif = await readExif(it.file);
     if (!it.exif?.geo && !it.draft.place) it.draft.place = $("#default-place").value.trim();
     if (it.exif?.geo && !it.draft.place) it.draft.place = `${it.exif.geo.lat.toFixed(4)}, ${it.exif.geo.lon.toFixed(4)}`;
@@ -1040,9 +1337,10 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     catch {
       it.status = "ready"; it.blob = null;
       it.error = "Billedet kunne ikke åbnes. Prøv et JPG eller PNG (iPhone: Indstillinger → Kamera → Formater → Mest kompatibel).";
-      renderItem(it); return;
+      if (it.auto) toReview(it); else renderItem(it);
+      return;
     }
-    if (!state.sample || !state.vision) { it.status = "ready"; renderItem(it); return; }
+    if (!state.sample || !state.vision) { it.status = "ready"; if (it.auto) toReview(it); else renderItem(it); return; }
     it.status = "scanning"; renderItem(it);
     it.ctl = new AbortController();
     try {
@@ -1052,6 +1350,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       it.result = r;
       it.draft = toDraft(r, it.draft.place, !!it.exif?.geo);
       it.status = "ready";
+      if (it.auto) await autoDecide(it);
     } catch (e) {
       if (!state.queue.includes(it) || e?.code === "cancelled") return;
       it.error = aiError(e?.code);
@@ -1061,6 +1360,9 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
         it.status = "paused";
         if (e?.code === "rate_limited") for (const o of state.queue) if (o.status === "prep") { o.status = "paused"; renderItem(o); }
       }
+      if (e?.code === "rate_limited" && state.import && !state.import.finished) state.import.paused = true;
+      if (DISABLED.includes(e?.code)) { for (const o of [...state.queue]) toReview(o); }
+      else if (it.auto && e?.code !== "rate_limited") toReview(it);
     } finally {
       if (state.queue.includes(it)) renderItem(it);
     }
@@ -1094,14 +1396,14 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     it.status = "saving"; it.error = ""; renderItem(it);
     const doc = docFrom(d, {
       source: it.result && !d.noAnimal ? "ai" : "manuel", createdAt: Date.now(), assetId: null,
-      place: d.place || "", geo: it.exif?.geo || null, takenAt: it.exif?.takenAt || null,
+      place: d.place || "", geo: it.exif?.geo || null, takenAt: it.exif?.takenAt || null, fileSig: it.sig || fileSig(it.file),
     });
     const preview = previewEntry(doc);
     let uploaded = null;
     try {
       if (state.memory) {
         const id = "mem-" + (++uid);
-        memUrls.set(id, it.url);
+        memUrls.set(id, urlOf(it));
         state.sightings.push({ id, ...doc });
         removeItem(it, true);
       } else {
@@ -1111,11 +1413,12 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
         uploaded = null;
         removeItem(it);
       }
+      importSigs.add(doc.fileSig);
       state.pendingSelect = key;
       render();
       refreshQueueStatus();
       if (!quiet) {
-        if (isNew) celebrate(preview, doc.assetId ? "/_blob/" + doc.assetId : it.url);
+        if (isNew) celebrate(preview, doc.assetId ? "/_blob/" + doc.assetId : urlOf(it));
         else toast(`Nyt billede af ${preview.name}`);
       }
       return isNew ? preview.name : true;
@@ -1130,7 +1433,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
 
   async function saveAll() {
     let saved = 0; const fresh = [];
-    for (const it of state.queue.filter(i => i.status === "ready")) {
+    for (const it of state.queue.filter(i => i.status === "ready" && !i.hidden)) {
       const r = await saveItem(it, true);
       if (r) saved++;
       if (typeof r === "string") fresh.push(r);
@@ -1199,28 +1502,42 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     } catch { toast("Billedet kunne ikke slettes. Prøv igen."); }
   }
 
-  /* ---------- unlock moment ---------- */
-  function celebrate(e, src) {
+  /* ---------- unlock moments: one overlay at a time ---------- */
+  const overlays = [];
+  function showOverlay(html) { overlays.push(html); if (overlays.length === 1) openOverlay(); }
+  function openOverlay() {
     const root = $("#unlock-root");
-    root.innerHTML = `<div class="unlock" role="dialog" aria-modal="true" aria-label="Nyt dyr registreret">
-      <div class="flash"></div>
-      <div class="u">
-        <div class="lbl">${e.bonus ? "NYT BONUSDYR!" : "NYT DYR REGISTRERET!"}</div>
-        <img src="${esc(src)}" alt="">
-        <div class="ub">
-          <span class="lcdfont" style="font-size:22px">No.${pad(e.no)}${e.region ? ` · ${esc(REGION[e.region].label.toUpperCase())}` : ""}</span>
-          <h3>${esc(e.name)}</h3>
-          <div class="chips">${catHtml(e.cat)}${rarityHtml(e.sp?.info?.rarity)}</div>
-          <button class="btn" id="unlock-ok">Fedt!</button>
-        </div>
-      </div>
-    </div>`;
-    const close = () => { root.innerHTML = ""; };
-    $("#unlock-ok").focus();
-    $("#unlock-ok").onclick = close;
-    const ov = root.querySelector(".unlock");
+    if (!overlays.length) { root.innerHTML = ""; return; }
+    root.innerHTML = overlays[0];
+    const ov = root.querySelector(".unlock"), ok = root.querySelector("#unlock-ok");
+    const close = () => { overlays.shift(); openOverlay(); };
+    ok.focus(); ok.onclick = close;
     ov.onclick = ev => { if (ev.target === ov) close(); };
     ov.onkeydown = ev => { if (ev.key === "Escape") close(); };
+  }
+  const overlayHtml = (label, body) => `<div class="unlock" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="flash"></div><div class="u"><div class="lbl">${esc(label.toUpperCase())}</div>${body}</div></div>`;
+
+  function celebrate(e, src) {
+    showOverlay(overlayHtml(e.bonus ? "Nyt bonusdyr!" : "Nyt dyr registreret!", `<img src="${esc(src)}" alt="">
+      <div class="ub">
+        <span class="lcdfont" style="font-size:22px">No.${pad(e.no)}${e.region ? ` · ${esc(REGION[e.region].label.toUpperCase())}` : ""}</span>
+        <h3>${esc(e.name)}</h3>
+        <div class="chips">${catHtml(e.cat)}${rarityHtml(e.sp?.info?.rarity)}</div>
+        <button class="btn" id="unlock-ok">Fedt!</button>
+      </div>`));
+  }
+  function celebrateBadges(list) {
+    showOverlay(overlayHtml(list.length > 1 ? `${list.length} achievements låst op!` : "Achievement låst op!", `<div class="ub">
+      ${list.map(a => `<div class="won"><div class="b-icon" style="background:${medalOf(a)}">${a.icon}</div><div><h3>${esc(a.name)}${tierName(a) ? ` · ${tierName(a)}` : ""}</h3><p class="small">${esc(a.desc)}</p></div></div>`).join("")}
+      <button class="btn" id="unlock-ok">Fedt!</button>
+    </div>`));
+  }
+  function importSummary(imp) {
+    const rows = imp.added.map(x => { const e = entryByKey(x.key); return `<li>${e ? `No.${pad(e.no)} ` : ""}${esc(e ? e.name : x.name)}</li>`; }).join("");
+    showOverlay(overlayHtml(`${imp.added.length} nye dyr fra albummet!`, `<div class="ub">
+      <ul class="small" style="text-align:left;margin:0;padding-left:18px;max-height:45vh;overflow:auto;justify-self:stretch">${rows}</ul>
+      <button class="btn" id="unlock-ok">Fedt!</button>
+    </div>`));
   }
 
   /* ---------- misc UI ---------- */
@@ -1248,7 +1565,17 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   const device = $("#device");
   window.addEventListener("dragover", e => { e.preventDefault(); device.classList.add("over"); });
   window.addEventListener("dragleave", e => { if (!e.relatedTarget) device.classList.remove("over"); });
-  window.addEventListener("drop", e => { e.preventDefault(); device.classList.remove("over"); if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+  window.addEventListener("drop", e => { e.preventDefault(); device.classList.remove("over"); const f = e.dataTransfer?.files; if (f?.length) addFiles([...f], f.length > 5); });
+  $("#albumbtn").addEventListener("click", () => $("#albumfile").click());
+  $("#albumfile").addEventListener("change", e => { addFiles([...e.target.files], true); e.target.value = ""; });
+  document.querySelector(".tabs").addEventListener("click", e => {
+    const b = e.target.closest("[data-tab]"); if (!b) return;
+    state.tab = b.dataset.tab;
+    for (const x of document.querySelectorAll(".tabs button")) x.setAttribute("aria-selected", x === b);
+    $("#badges").hidden = state.tab !== "badges";
+    $("#view-dex").hidden = state.tab !== "dex";
+    renderBadges();
+  });
   document.addEventListener("paste", e => {
     const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
     if (files.length) { e.preventDefault(); addFiles(files); }
@@ -1284,7 +1611,14 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   $("#tray-head").addEventListener("click", e => {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "save-all") saveAll();
-    if (act === "clear") for (const it of [...state.queue]) if (it.status !== "saving") removeItem(it);
+    if (act === "clear") for (const it of [...state.queue]) if (it.status !== "saving" && !it.hidden) removeItem(it);
+    if (act === "imp-resume" && state.import) { state.import.paused = false; for (const it of state.queue) if (it.auto && it.status === "paused") it.status = "prep"; pump(); }
+    if (act === "imp-stop" && state.import) {
+      for (const it of [...state.queue]) if (it.auto && it.status !== "saving") removeItem(it);
+      state.import.total = state.import.done + state.queue.filter(i => i.auto).length;
+      finishImportIfDone(); renderTrayHead();
+    }
+    if (act === "imp-close") { state.import = null; renderTrayHead(); }
   });
 
   $("#keys").addEventListener("click", e => { const b = e.target.closest("[data-region]"); if (!b) return; state.region = b.dataset.region; render(); });
@@ -1325,7 +1659,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   async function boot() {
     render();
     if (!window.claude?.use) {
-      state.memory = true;
+      state.memory = true; state.loaded = true;
       showNotice("Denne kopi kører uden for Claude, så AI-genkendelse er slået fra, og dyr gemmes kun, indtil du lukker siden.");
       return;
     }
@@ -1334,16 +1668,16 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     state.db = db; state.assets = assets; state.sample = sample;
     if (sample) state.vision = !!(await sample.limits().catch(() => null))?.images;
     if (!db) {
-      state.memory = true;
+      state.memory = true; state.loaded = true;
       showNotice("Samlingen kan ikke gemmes i denne visning. Dyr huskes kun, mens siden er åben.");
     } else {
       showNotice("");
-      if (!assets) { state.canAdd = false; $("#scanbtn").disabled = true; showNotice("Du ser en andens Dyredex. Kun ejeren kan registrere nye dyr."); }
+      if (!assets) { state.canAdd = false; $("#scanbtn").disabled = true; $("#albumbtn").disabled = true; showNotice("Du ser en andens Dyredex. Kun ejeren kan registrere nye dyr."); }
       else if (!state.vision) showNotice("AI-genkendelse er ikke tilgængelig her. Du kan stadig registrere dyr ved at skrive navnet selv.");
       let first = true;
       db.collection("sightings").orderBy("createdAt", "asc").onSnapshot(snap => {
         state.sightings = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.key && s.name);
-        if (first) { first = false; state.selected = null; }
+        if (first) { first = false; state.selected = null; state.loaded = true; }
         render();
         refreshQueueStatus();
       }, () => showNotice("Samlingen kunne ikke hentes. Genindlæs siden for at prøve igen."));
