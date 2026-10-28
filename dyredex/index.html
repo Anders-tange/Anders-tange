@@ -1,0 +1,979 @@
+<title>Dyredex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  /* Layout: a red field-scanner device band on top, a dark "screen" for scanning, then the dex grid of caught species. */
+  :root {
+    --bg: #edf0f3;
+    --surface: #ffffff;
+    --fg: #15191e;
+    --muted: #5a636d;
+    --line: #d3d9df;
+    --dex: #c4142f;
+    --dex-deep: #8f0b20;
+    --dex-ink: #ffffff;
+    --lens: #2f8cff;
+    --screen: #0e2620;
+    --screen-line: #1f4a3d;
+    --screen-fg: #8ff0bb;
+    --screen-dim: #5fae86;
+    --focus: #2f8cff;
+    --ok: #1f8a4c;
+    --warn: #b26a00;
+    --danger: #c4142f;
+    --shadow: 0 1px 2px rgb(20 30 40 / .06), 0 6px 20px rgb(20 30 40 / .07);
+    --font-display: "Chakra Petch", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101418; --surface: #191f25; --fg: #e7ebef; --muted: #98a2ad; --line: #2b333c;
+      --dex: #b0122b; --dex-deep: #6d0818; --screen: #0a1d18; --screen-line: #1a3d32;
+      --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 20px rgb(0 0 0 / .25);
+      --ok: #4cc27f; --warn: #e3a23b; --danger: #ff5a6e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101418; --surface: #191f25; --fg: #e7ebef; --muted: #98a2ad; --line: #2b333c;
+    --dex: #b0122b; --dex-deep: #6d0818; --screen: #0a1d18; --screen-line: #1a3d32;
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 20px rgb(0 0 0 / .25);
+    --ok: #4cc27f; --warn: #e3a23b; --danger: #ff5a6e;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+    z-index: 10; background: var(--dex);
+  }
+  .wrap {
+    max-width: 1120px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Device band ---------- */
+  .band {
+    background: linear-gradient(180deg, var(--dex) 0%, var(--dex) 70%, var(--dex-deep) 100%);
+    color: var(--dex-ink);
+    border-bottom: 4px solid var(--dex-deep);
+  }
+  .band .wrap { padding-block: 18px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .lens {
+    width: 64px; height: 64px; flex: none; border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #d8ecff 0 9%, var(--lens) 10% 58%, #1555b0 72%);
+    border: 5px solid #ffffff; box-shadow: 0 0 0 2px var(--dex-deep), inset 0 -4px 10px rgb(0 0 0 / .25);
+  }
+  .lens.busy { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 2px var(--dex-deep), 0 0 22px 6px rgb(120 190 255 / .75), inset 0 -4px 10px rgb(0 0 0 / .25); } }
+  .leds { display: flex; gap: 6px; align-self: flex-start; margin-top: 4px; }
+  .leds i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--dex-deep); display: block; }
+  .leds i:nth-child(1) { background: #ff5b5b; }
+  .leds i:nth-child(2) { background: #ffd23f; }
+  .leds i:nth-child(3) { background: #49d27a; }
+  .brand { display: grid; gap: 2px; min-width: 0; }
+  .brand h1 { font-size: clamp(30px, 6vw, 44px); letter-spacing: .02em; text-transform: uppercase; }
+  .brand p { margin: 0; font-size: 14px; opacity: .88; }
+  .tally { margin-left: auto; display: flex; gap: 10px; }
+  .tally div {
+    background: rgb(0 0 0 / .22); border-radius: 10px; padding: 8px 14px; text-align: right; min-width: 92px;
+  }
+  .tally b { display: block; font-family: var(--font-mono); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tally span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+  @media (max-width: 560px) { .tally { margin-left: 0; width: 100%; } .tally div { flex: 1; text-align: left; } }
+
+  .notice {
+    margin: 16px 0 0; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--muted); font-size: 14px;
+  }
+
+  main { padding-block: 22px 60px; display: grid; gap: 28px; }
+
+  /* ---------- Scanner ---------- */
+  .scanner {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 14px; box-shadow: var(--shadow); display: grid; gap: 14px;
+  }
+  .screen {
+    position: relative; overflow: hidden;
+    background: var(--screen); color: var(--screen-fg); border-radius: 12px;
+    border: 3px solid var(--screen-line);
+    background-image: linear-gradient(var(--screen-line) 1px, transparent 1px), linear-gradient(90deg, var(--screen-line) 1px, transparent 1px);
+    background-size: 22px 22px; background-position: -1px -1px;
+  }
+  .drop {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 22px; cursor: pointer;
+    transition: background-color .15s;
+  }
+  .drop.over { background-color: #12392d; }
+  .drop .reticle {
+    width: 72px; height: 72px; flex: none; position: relative;
+    border: 2px dashed var(--screen-dim); border-radius: 12px;
+    display: grid; place-items: center; font-family: var(--font-mono); font-size: 30px;
+  }
+  .drop .txt { flex: 1 1 220px; min-width: 0; }
+  .drop h2 { font-size: 22px; text-transform: uppercase; letter-spacing: .04em; }
+  .drop p { margin: 4px 0 0; color: var(--screen-dim); font-size: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; font-weight: 600;
+    background: var(--dex); color: var(--dex-ink); box-shadow: inset 0 -3px 0 var(--dex-deep);
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:disabled { opacity: .55; cursor: default; filter: none; }
+  .btn.ghost { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+  .btn.screen-btn { background: var(--screen-fg); color: var(--screen); box-shadow: inset 0 -3px 0 var(--screen-dim); font-family: var(--font-display); text-transform: uppercase; letter-spacing: .05em; font-size: 16px; padding: 12px 20px; }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.danger { background: var(--danger); box-shadow: none; color: #fff; }
+  #file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  .queue { display: grid; gap: 12px; }
+  .queue:empty { display: none; }
+  .queue-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .queue-head:empty { display: none; }
+  .queue-head .grow { flex: 1; color: var(--muted); font-size: 14px; }
+
+  .scan {
+    display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px;
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--bg);
+  }
+  @media (max-width: 600px) { .scan { grid-template-columns: minmax(0, 1fr); } }
+  .shot { position: relative; border-radius: 10px; overflow: hidden; background: var(--screen); aspect-ratio: 1; max-width: 100%; }
+  @media (max-width: 600px) { .shot { aspect-ratio: 4 / 3; } }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shot.scanning::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 30%;
+    background: linear-gradient(180deg, transparent, rgb(143 240 187 / .55) 85%, rgb(143 240 187 / .95));
+    animation: sweep 1.6s linear infinite;
+  }
+  .shot.scanning::before {
+    content: ""; position: absolute; inset: 0; z-index: 1;
+    box-shadow: inset 0 0 0 3px var(--screen-fg); border-radius: 10px;
+  }
+  @keyframes sweep { from { top: -30%; } to { top: 100%; } }
+  .scan-body { display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .status { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .status .tag { padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+  .tag.new { background: var(--dex); color: var(--dex-ink); }
+  .tag.known { background: var(--line); color: var(--fg); }
+  .tag.warn { background: var(--warn); color: #fff; }
+  .fields { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, .9fr); gap: 8px; }
+  @media (max-width: 760px) { .fields { grid-template-columns: minmax(0, 1fr); } }
+  .field { display: grid; gap: 3px; min-width: 0; }
+  .field label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .field input, .field select, .search input, .tools select {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  }
+  .field input.name { font-family: var(--font-display); font-size: 20px; font-weight: 700; padding: 5px 10px; }
+  .field input.latin { font-style: italic; }
+  .desc { margin: 0; color: var(--fg); font-size: 14px; max-width: 70ch; }
+  .alts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+  .alts button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-size: 13px; }
+  .alts button:hover { border-color: var(--fg); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .err { color: var(--danger); font-size: 14px; margin: 0; }
+  .conf { height: 6px; width: 90px; border-radius: 3px; background: var(--line); overflow: hidden; display: inline-block; vertical-align: middle; }
+  .conf i { display: block; height: 100%; background: var(--ok); }
+
+  /* ---------- Collection ---------- */
+  .dex-head { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+  .dex-head h2 { font-size: 26px; text-transform: uppercase; letter-spacing: .03em; }
+  .tools { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .search { position: relative; }
+  .search input { width: 200px; max-width: 100%; }
+  .tools select { width: auto; }
+  @media (max-width: 560px) { .tools { margin-left: 0; width: 100%; } .search { flex: 1; } .search input { width: 100%; } }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .chip {
+    flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+    padding: 5px 12px; cursor: pointer; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap;
+  }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); }
+  .chip .n { font-family: var(--font-mono); color: var(--muted); font-size: 12px; }
+  .chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .chip[aria-pressed="true"] .n { color: inherit; opacity: .75; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
+  @media (max-width: 420px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+  .card {
+    position: relative; display: grid; grid-template-rows: auto 1fr; text-align: left;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; padding: 0;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .card .pic { aspect-ratio: 1; background: var(--screen); position: relative; max-width: 100%; }
+  .card .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .no {
+    position: absolute; top: 8px; left: 8px; background: rgb(10 14 18 / .72); color: #fff;
+    font-family: var(--font-mono); font-size: 12px; padding: 2px 7px; border-radius: 6px; font-weight: 600;
+  }
+  .card .count {
+    position: absolute; top: 8px; right: 8px; background: rgb(10 14 18 / .72); color: #fff;
+    font-size: 12px; padding: 2px 7px; border-radius: 6px;
+  }
+  .card .meta { padding: 10px 12px 12px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .card h3 { font-size: 17px; overflow-wrap: anywhere; }
+  .card .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .cat {
+    display: inline-block; background: var(--c, var(--muted)); color: #fff; border-radius: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; white-space: nowrap;
+  }
+  .rar { font-size: 12px; letter-spacing: 1px; color: var(--dex); white-space: nowrap; }
+  .rar .off { color: var(--line); }
+  .card.locked { cursor: default; border-style: dashed; background: transparent; }
+  .card.locked.can { cursor: pointer; }
+  .card.locked:hover { transform: none; box-shadow: none; }
+  .card.locked .pic { display: grid; place-items: center; opacity: .85; }
+  .card.locked .pic span { font-family: var(--font-mono); font-size: 54px; color: var(--screen-dim); }
+  .card.locked h3 { color: var(--muted); font-family: var(--font-mono); letter-spacing: .2em; }
+  .card.locked p { margin: 0; font-size: 12px; color: var(--muted); }
+  .empty-msg { color: var(--muted); margin: 0; }
+
+  /* ---------- Detail ---------- */
+  dialog {
+    border: 0; padding: 0; border-radius: 18px; width: min(860px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+    background: var(--surface); color: var(--fg); box-shadow: 0 20px 60px rgb(0 0 0 / .35);
+  }
+  dialog::backdrop { background: rgb(8 12 16 / .6); }
+  .detail { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+  @media (max-width: 720px) { .detail { grid-template-columns: minmax(0, 1fr); } }
+  .detail .media { background: var(--screen); padding: 12px; display: grid; gap: 10px; align-content: start; }
+  .detail .big { aspect-ratio: 1; border-radius: 10px; overflow: hidden; max-width: 100%; }
+  .detail .big img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumbs { display: flex; gap: 6px; overflow-x: auto; }
+  .thumbs button { flex: none; width: 56px; height: 56px; padding: 0; border-radius: 8px; overflow: hidden; border: 2px solid transparent; cursor: pointer; background: none; }
+  .thumbs button[aria-current="true"] { border-color: var(--screen-fg); }
+  .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--screen-dim); font-size: 13px; flex-wrap: wrap; }
+  .detail .info { padding: 20px 22px 22px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .detail .top { display: flex; align-items: start; gap: 10px; }
+  .detail .top .no { font-family: var(--font-mono); color: var(--muted); font-size: 14px; }
+  .detail h2 { font-size: 30px; overflow-wrap: anywhere; }
+  .detail .latin { font-style: italic; color: var(--muted); margin: 2px 0 0; }
+  .close { margin-left: auto; border: 0; background: var(--bg); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: none; }
+  .types { display: flex; gap: 6px; flex-wrap: wrap; }
+  .type { border: 1px solid var(--line); border-radius: 6px; font-size: 12px; padding: 1px 8px; color: var(--muted); }
+  .entry { margin: 0; font-size: 15px; }
+  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 14px; }
+  .facts dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .07em; padding-top: 2px; }
+  .facts dd { margin: 0; }
+  .stats { display: grid; gap: 6px; }
+  .stat { display: grid; grid-template-columns: 82px minmax(0, 1fr) 24px; align-items: center; gap: 8px; font-size: 13px; }
+  .stat .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .stat .bar i { display: block; height: 100%; background: var(--dex); border-radius: 4px; }
+  .stat b { font-family: var(--font-mono); font-weight: 500; text-align: right; }
+  .fun { border-left: 3px solid var(--dex); padding: 4px 0 4px 12px; margin: 0; font-size: 14px; }
+
+  /* ---------- Unlock moment ---------- */
+  .unlock {
+    position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+    background: rgb(8 12 16 / .72); padding: 20px;
+  }
+  .unlock .flash { position: absolute; inset: 0; background: #fff; animation: flash .6s ease-out forwards; pointer-events: none; }
+  @keyframes flash { from { opacity: .9; } to { opacity: 0; } }
+  .unlock .card-u {
+    width: min(340px, 100%); background: var(--surface); border-radius: 18px; overflow: hidden;
+    border: 4px solid var(--dex); text-align: center; animation: pop .55s cubic-bezier(.2, 1.4, .4, 1) both;
+  }
+  @keyframes pop { from { transform: scale(.6) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .unlock .label { background: var(--dex); color: var(--dex-ink); font-family: var(--font-display); text-transform: uppercase; letter-spacing: .12em; padding: 8px; font-size: 15px; }
+  .unlock img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; max-width: 100%; }
+  .unlock .u-body { padding: 14px; display: grid; gap: 8px; justify-items: center; }
+  .unlock h3 { font-size: 26px; }
+  .unlock .mono { color: var(--muted); }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 40;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: var(--fg); color: var(--bg); border-radius: 10px; padding: 10px 16px; font-size: 14px; max-width: calc(100vw - 32px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+    .shot.scanning::after { display: none; }
+  }
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div class="lens" id="lens" aria-hidden="true"></div>
+    <div class="leds" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="brand">
+      <h1>Dyredex</h1>
+      <p>Fotografér et dyr, scan det, og lås det op i din samling.</p>
+    </div>
+    <div class="tally" aria-live="polite">
+      <div><b id="t-species">000</b><span>Arter fanget</span></div>
+      <div><b id="t-photos">000</b><span>Billeder</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <p class="notice" id="notice" hidden></p>
+</div>
+
+<main class="wrap">
+  <section class="scanner" id="scanner" aria-labelledby="scan-title">
+    <div class="screen">
+      <div class="drop" id="drop" role="button" tabindex="0" aria-describedby="drop-help">
+        <div class="reticle" aria-hidden="true">+</div>
+        <div class="txt">
+          <h2 id="scan-title">Scan et dyr</h2>
+          <p id="drop-help">Slip et eller flere billeder her, sæt ind med Ctrl+V, eller vælg fra din telefon. AI'en fortæller dig hvilket dyr det er.</p>
+        </div>
+        <span class="btn screen-btn" aria-hidden="true">Vælg billeder</span>
+      </div>
+      <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+    </div>
+    <div class="queue-head" id="queue-head"></div>
+    <div class="queue" id="queue" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="dex-title" style="display:grid;gap:14px">
+    <div class="dex-head">
+      <h2 id="dex-title">Din samling</h2>
+      <div class="tools">
+        <div class="search"><input id="q" type="search" placeholder="Søg i dyr…" aria-label="Søg i dyr"></div>
+        <select id="sort" aria-label="Sortér">
+          <option value="nr">Nummer</option>
+          <option value="name">Navn A–Å</option>
+          <option value="recent">Senest fanget</option>
+          <option value="rarity">Sjældneste først</option>
+        </select>
+      </div>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filtrér efter dyregruppe"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<dialog id="detail" aria-labelledby="d-name"></dialog>
+<div id="unlock-root"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const CATS = [
+    { id: "pattedyr", label: "Pattedyr", c: "#a5521b" },
+    { id: "fugl", label: "Fugle", c: "#2765b0" },
+    { id: "krybdyr", label: "Krybdyr", c: "#2e7a3a" },
+    { id: "padde", label: "Padder", c: "#127a74" },
+    { id: "fisk", label: "Fisk", c: "#23479a" },
+    { id: "insekt", label: "Insekter", c: "#856500" },
+    { id: "edderkoppedyr", label: "Edderkoppedyr", c: "#6a3ea0" },
+    { id: "bloeddyr", label: "Bløddyr", c: "#a33c70" },
+    { id: "krebsdyr", label: "Krebsdyr", c: "#b0411d" },
+    { id: "andet", label: "Andet", c: "#56606b" },
+  ];
+  const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  const TYPES = ["Skov", "Mark", "Vand", "Hav", "Luft", "Bjerg", "Ørken", "Is", "Jungle", "By", "Nat", "Gift", "Hjem"];
+  const RARITY = ["almindelig", "usædvanlig", "sjælden", "legendarisk"];
+  const RARITY_LABEL = { almindelig: "Almindelig", "usædvanlig": "Usædvanlig", "sjælden": "Sjælden", legendarisk: "Legendarisk" };
+  const STATS = [["fart", "Fart"], ["styrke", "Styrke"], ["snilde", "Snilde"], ["nuttethed", "Nuttethed"]];
+
+  const $ = s => document.querySelector(s);
+  const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const pad = n => String(n).padStart(3, "0");
+  const fmtDate = ms => { try { return new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "short", year: "numeric" }).format(new Date(ms)); } catch { return ""; } };
+  const slug = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/æ/g, "ae").replace(/ø/g, "oe").replace(/å/g, "aa").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const keyFor = d => slug(d.latin) || slug(d.name);
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Number(n) || 0));
+  const rarityIdx = r => Math.max(0, RARITY.indexOf(r));
+
+  const state = {
+    sightings: [], queue: [], filter: "alle", q: "", sort: "nr",
+    db: null, assets: null, sample: null, vision: false,
+    connected: false, canAdd: true, memory: false,
+  };
+  const memUrls = new Map();
+  let uid = 0;
+
+  /* ---------- derived data ---------- */
+  function species() {
+    const map = new Map();
+    const sorted = [...state.sightings].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    for (const s of sorted) {
+      let sp = map.get(s.key);
+      if (!sp) { sp = { key: s.key, info: s, photos: [], no: map.size + 1 }; map.set(s.key, sp); }
+      sp.photos.push(s);
+    }
+    return map;
+  }
+  const photoSrc = s => s.assetId ? "/_blob/" + s.assetId : (memUrls.get(s.id) || "");
+
+  /* ---------- rendering ---------- */
+  function render() {
+    const map = species();
+    const list = [...map.values()];
+    $("#t-species").textContent = pad(list.length);
+    $("#t-photos").textContent = pad(state.sightings.length);
+    renderChips(list);
+    renderGrid(list);
+  }
+
+  function renderChips(list) {
+    const counts = {};
+    for (const sp of list) counts[sp.info.category] = (counts[sp.info.category] || 0) + 1;
+    const chip = (id, label, n, c) =>
+      `<button class="chip" data-f="${id}" aria-pressed="${state.filter === id}" ${c ? `style="--c:${c}"` : ""}>${c ? '<span class="dot"></span>' : ""}${esc(label)} <span class="n">${n}</span></button>`;
+    $("#chips").innerHTML = chip("alle", "Alle", list.length) +
+      CATS.filter(c => counts[c.id] || state.filter === c.id).map(c => chip(c.id, c.label, counts[c.id] || 0, c.c)).join("");
+  }
+
+  function rarityHtml(r) {
+    const n = rarityIdx(r) + 1;
+    return `<span class="rar" title="${esc(RARITY_LABEL[r] || "")}" aria-label="${esc(RARITY_LABEL[r] || "")}">${"◆".repeat(n)}<span class="off">${"◆".repeat(4 - n)}</span></span>`;
+  }
+  const catHtml = id => { const c = CAT[id] || CAT.andet; return `<span class="cat" style="--c:${c.c}">${esc(c.label)}</span>`; };
+
+  function renderGrid(list) {
+    const q = state.q.trim().toLowerCase();
+    let shown = list.filter(sp =>
+      (state.filter === "alle" || sp.info.category === state.filter) &&
+      (!q || [sp.info.name, sp.info.nameEn, sp.info.latin].some(v => String(v || "").toLowerCase().includes(q))));
+    const last = sp => Math.max(...sp.photos.map(p => p.createdAt || 0));
+    if (state.sort === "name") shown.sort((a, b) => a.info.name.localeCompare(b.info.name, "da"));
+    else if (state.sort === "recent") shown.sort((a, b) => last(b) - last(a));
+    else if (state.sort === "rarity") shown.sort((a, b) => rarityIdx(b.info.rarity) - rarityIdx(a.info.rarity) || a.no - b.no);
+
+    const cards = shown.map(sp => {
+      const cover = sp.photos[0];
+      return `<button class="card" data-key="${esc(sp.key)}" aria-label="#${pad(sp.no)} ${esc(sp.info.name)}">
+        <div class="pic"><img src="${esc(photoSrc(cover))}" alt="" loading="lazy"><span class="no">#${pad(sp.no)}</span>${sp.photos.length > 1 ? `<span class="count">${sp.photos.length} billeder</span>` : ""}</div>
+        <div class="meta"><h3>${esc(sp.info.name)}</h3><div class="row">${catHtml(sp.info.category)}${rarityHtml(sp.info.rarity)}</div></div>
+      </button>`;
+    });
+
+    const filtered = state.filter !== "alle" || q;
+    if (filtered && !shown.length) {
+      $("#grid").innerHTML = `<p class="empty-msg">Ingen dyr matcher. Prøv en anden søgning eller gruppe.</p>`;
+      return;
+    }
+    const lockedCount = filtered ? 0 : (list.length ? 3 : 8);
+    const can = state.canAdd ? " can" : "";
+    for (let i = 0; i < lockedCount; i++) {
+      cards.push(`<div class="card locked${can}" ${state.canAdd ? 'role="button" tabindex="0" data-pick="1"' : ""} aria-label="Ukendt dyr, ikke låst op endnu">
+        <div class="pic"><span>?</span></div>
+        <div class="meta"><h3>#${pad(list.length + i + 1)}</h3><p>${i === 0 && !list.length ? "Scan dit første billede for at låse op" : "Ikke låst op endnu"}</p></div>
+      </div>`);
+    }
+    $("#grid").innerHTML = cards.join("");
+  }
+
+  /* ---------- scanning queue ---------- */
+  function renderQueueHead() {
+    const ready = state.queue.filter(i => i.status === "ready").length;
+    const busy = state.queue.some(i => i.status === "scanning" || i.status === "prep");
+    $("#lens").classList.toggle("busy", busy);
+    $("#queue-head").innerHTML = state.queue.length > 1
+      ? `<span class="grow">${state.queue.length} billeder i scanneren${busy ? " · scanner…" : ""}</span>` +
+        (ready > 1 ? `<button class="btn small" data-act="save-all">Tilføj alle ${ready}</button>` : "") +
+        `<button class="btn ghost small" data-act="clear">Ryd scanneren</button>`
+      : "";
+  }
+
+  function itemHtml(it) {
+    const d = it.draft;
+    const map = species();
+    const key = keyFor(d);
+    const known = key && map.get(key);
+    let status = "";
+    if (it.status === "prep") status = `<span>I kø…</span>`;
+    else if (it.status === "scanning") status = `<span>Scanner billedet…</span>`;
+    else if (it.status === "saving") status = `<span>Gemmer…</span>`;
+    else if (it.status === "paused") status = `<span class="tag warn">Sat på pause</span>`;
+    else if (it.noAnimal) status = `<span class="tag warn">Intet dyr fundet</span><span>Skriv selv navnet, hvis der er et dyr</span>`;
+    else if (known) status = `<span class="tag known">Allerede fanget · #${pad(known.no)}</span><span>Billedet føjes til ${esc(known.info.name)}</span>`;
+    else if (d.name) status = `<span class="tag new">Nyt dyr!</span>`;
+    else status = `<span>Skriv hvilket dyr det er</span>`;
+    if (it.result && typeof it.result.confidence === "number" && it.status === "ready" && !it.noAnimal) {
+      const pct = Math.round(clamp(it.result.confidence, 0, 1) * 100);
+      status += `<span title="Hvor sikker AI'en er">Sikkerhed <span class="conf"><i style="width:${pct}%"></i></span> ${pct}%</span>`;
+    }
+
+    const editable = it.status === "ready";
+    const scanning = it.status === "scanning" || it.status === "prep";
+    const alts = (it.result?.alternatives || []).filter(a => a && a.name);
+    const catOpts = CATS.map(c => `<option value="${c.id}" ${d.category === c.id ? "selected" : ""}>${esc(c.label)}</option>`).join("");
+
+    return `<div class="shot${scanning ? " scanning" : ""}"><img src="${esc(it.url)}" alt="Dit billede"></div>
+      <div class="scan-body">
+        <div class="status">${status}</div>
+        ${scanning ? `<p class="desc" style="color:var(--muted)">AI'en kigger på billedet. Det tager typisk 5–20 sekunder.</p>
+          <div class="actions"><button class="btn ghost small" data-act="discard">Annullér</button></div>` : `
+        <div class="fields">
+          <div class="field"><label for="n-${it.id}">Navn</label><input class="name" id="n-${it.id}" data-k="name" value="${esc(d.name)}" placeholder="Fx Rødræv" ${editable ? "" : "disabled"}></div>
+          <div class="field"><label for="l-${it.id}">Latinsk navn</label><input class="latin" id="l-${it.id}" data-k="latin" value="${esc(d.latin)}" placeholder="Fx Vulpes vulpes" ${editable ? "" : "disabled"}></div>
+          <div class="field"><label for="c-${it.id}">Gruppe</label><select id="c-${it.id}" data-k="category" ${editable ? "" : "disabled"}>${catOpts}</select></div>
+        </div>
+        ${alts.length ? `<div class="alts"><span>Eller måske:</span>${alts.map((a, i) => `<button data-alt="${i}">${esc(a.name)}</button>`).join("")}</div>` : ""}
+        ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
+        ${it.error ? `<p class="err">${esc(it.error)}</p>` : ""}
+        <div class="actions">
+          ${it.status === "paused" ? `<button class="btn small" data-act="retry">Scan igen</button>` : ""}
+          ${editable ? `<button class="btn" data-act="save" ${state.canAdd ? "" : "disabled"}>${known ? "Tilføj billede" : "Tilføj til Dyredex"}</button>` : ""}
+          ${editable && it.result && state.vision ? `<button class="btn ghost small" data-act="rescan">Scan igen</button>` : ""}
+          <button class="btn ghost small" data-act="discard" ${it.status === "saving" ? "disabled" : ""}>Kassér</button>
+        </div>`}
+      </div>`;
+  }
+
+  function renderItem(it) {
+    let el = document.getElementById("it-" + it.id);
+    if (!el) {
+      el = document.createElement("article");
+      el.className = "scan";
+      el.id = "it-" + it.id;
+      el.dataset.id = it.id;
+      $("#queue").append(el);
+    }
+    el.innerHTML = itemHtml(it);
+    renderQueueHead();
+  }
+  function removeItem(it, keepUrl) {
+    state.queue = state.queue.filter(i => i !== it);
+    it.ctl?.abort();
+    document.getElementById("it-" + it.id)?.remove();
+    if (!keepUrl) URL.revokeObjectURL(it.url);
+    renderQueueHead();
+  }
+  function refreshStatusLines() {
+    for (const it of state.queue) if (it.status === "ready") {
+      const el = document.getElementById("it-" + it.id);
+      if (!el || el.contains(document.activeElement)) continue;
+      el.innerHTML = itemHtml(it);
+    }
+  }
+
+  async function compress(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("decode")); i.src = url; });
+      const max = 1600;
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const s = Math.min(1, max / Math.max(w, h));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("encode")), "image/jpeg", 0.85));
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  function addFiles(files) {
+    if (!state.canAdd) { toast("Kun ejeren af denne Dyredex kan tilføje dyr."); return; }
+    let added = 0;
+    for (const f of files) {
+      if (!f || !/^image\//.test(f.type || "")) continue;
+      const it = { id: ++uid, file: f, url: URL.createObjectURL(f), status: "prep", draft: { name: "", latin: "", category: "andet" } };
+      state.queue.push(it);
+      renderItem(it);
+      added++;
+    }
+    if (!added) toast("Vælg et billede (JPG, PNG, WebP eller GIF).");
+    pump();
+  }
+
+  let pumping = false;
+  async function pump() {
+    if (pumping) return;
+    pumping = true;
+    try {
+      let it;
+      while ((it = state.queue.find(i => i.status === "prep"))) await scanItem(it);
+    } finally { pumping = false; renderQueueHead(); }
+  }
+
+  function buildPrompt() {
+    const caught = [...species().values()].map(sp => `- ${sp.info.name} (${sp.info.latin || "?"})`).join("\n");
+    return `Du er motoren i en "Dyredex": en Pokédex for rigtige dyr, som brugeren selv har fotograferet.
+Se på billedet og identificér det dyr, der er hovedmotivet. Vær så præcis som muligt (art, ellers slægt/familie).
+Hvis der er flere dyr, så vælg det mest fremtrædende. Husdyr, kæledyr og dyr i zoo tæller også.
+
+Svar KUN med ét JSON-objekt i præcis dette format:
+{
+  "isAnimal": true,
+  "name": "dansk almindeligt navn med stort forbogstav, fx Rødræv",
+  "nameEn": "engelsk navn",
+  "latin": "videnskabeligt navn, fx Vulpes vulpes",
+  "category": en af ${JSON.stringify(CATS.map(c => c.id))},
+  "types": 1-2 værdier fra ${JSON.stringify(TYPES)} der passer til hvor dyret lever,
+  "rarity": en af ${JSON.stringify(RARITY)} (hvor svært det er at møde dyret; husdyr og almindelige byfugle er "almindelig"),
+  "confidence": tal mellem 0 og 1 for hvor sikker du er,
+  "alternatives": op til 3 objekter {"name": "...", "latin": "..."} med andre arter det kunne være, hvis du er i tvivl (ellers []),
+  "description": "2 korte sætninger på dansk i Pokédex-stil om dyret",
+  "funFact": "1 overraskende fakta på dansk",
+  "size": "typisk størrelse/vægt, kort",
+  "habitat": "hvor det lever, kort",
+  "stats": {"fart": 1-10, "styrke": 1-10, "snilde": 1-10, "nuttethed": 1-10}
+}
+Hvis der ikke er noget dyr på billedet: {"isAnimal": false}.
+${caught ? `\nBrugeren har allerede fanget disse arter. Hvis dyret er en af dem, så brug PRÆCIS samme name og latin:\n${caught}` : ""}`;
+  }
+
+  function applyResult(it, r) {
+    it.result = r;
+    it.noAnimal = !r || r.isAnimal === false;
+    if (it.noAnimal) { it.draft = { name: "", latin: "", category: "andet" }; return; }
+    const cat = CAT[slug(r.category).replace(/-/g, "")] ? slug(r.category).replace(/-/g, "") : "andet";
+    it.draft = {
+      name: String(r.name || "").trim(),
+      nameEn: String(r.nameEn || "").trim(),
+      latin: String(r.latin || "").trim(),
+      category: cat,
+      types: (Array.isArray(r.types) ? r.types : []).map(String).filter(t => TYPES.includes(t)).slice(0, 2),
+      rarity: RARITY.includes(r.rarity) ? r.rarity : "almindelig",
+      description: String(r.description || "").trim(),
+      funFact: String(r.funFact || "").trim(),
+      size: String(r.size || "").trim(),
+      habitat: String(r.habitat || "").trim(),
+      stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(r.stats?.[k], 1, 10)])),
+      confidence: clamp(r.confidence, 0, 1),
+    };
+  }
+
+  async function scanItem(it) {
+    it.error = "";
+    try { it.blob = it.blob || await compress(it.file); }
+    catch {
+      it.status = "ready"; it.error = "Billedet kunne ikke åbnes. Prøv et JPG eller PNG (iPhone: vælg 'Mest kompatibel' under Kamera → Formater).";
+      it.blob = null; renderItem(it); return;
+    }
+    if (!state.sample || !state.vision) {
+      it.status = "ready"; renderItem(it); return;
+    }
+    it.status = "scanning"; renderItem(it);
+    it.ctl = new AbortController();
+    try {
+      const r = await state.sample.json(buildPrompt(), { images: [it.blob], signal: it.ctl.signal, cache: false });
+      if (!state.queue.includes(it)) return;
+      applyResult(it, r);
+      it.status = "ready";
+    } catch (e) {
+      if (!state.queue.includes(it)) return;
+      const code = e?.code;
+      if (code === "cancelled") return;
+      it.status = "ready";
+      if (["not_granted", "sampling_disabled", "images_unavailable", "not_declared", "capability_disabled", "capability_removed"].includes(code)) {
+        state.vision = false;
+        it.error = "AI-genkendelse er slået fra her, så skriv selv hvilket dyr det er.";
+        showNotice("AI-genkendelse er ikke tilladt i denne visning. Du kan stadig tilføje dyr ved at skrive navnet selv.");
+      } else if (code === "rate_limited") {
+        it.status = "paused";
+        it.error = "Du har scannet mange billeder på kort tid. Vent lidt og tryk så Scan igen.";
+        for (const other of state.queue) if (other.status === "prep") { other.status = "paused"; renderItem(other); }
+      } else if (code === "image_rejected") {
+        it.error = "AI'en kunne ikke læse billedet. Prøv et andet billede eller skriv navnet selv.";
+      } else if (code === "refused") {
+        it.error = "AI'en ville ikke vurdere dette billede. Skriv selv navnet, hvis det er et dyr.";
+      } else if (code === "invalid_json") {
+        it.status = "paused";
+        it.error = "Svaret fra AI'en kunne ikke læses. Tryk Scan igen.";
+      } else {
+        it.status = "paused";
+        it.error = "Forbindelsen til AI'en fejlede. Tryk Scan igen.";
+      }
+    } finally {
+      if (state.queue.includes(it)) renderItem(it);
+    }
+  }
+
+  function readDraft(it) {
+    const el = document.getElementById("it-" + it.id);
+    if (!el) return it.draft;
+    for (const inp of el.querySelectorAll("[data-k]")) it.draft[inp.dataset.k] = inp.value.trim();
+    return it.draft;
+  }
+
+  async function saveItem(it, quiet) {
+    const d = readDraft(it);
+    if (!d.name) { it.error = "Giv dyret et navn først."; renderItem(it); document.getElementById("n-" + it.id)?.focus(); return false; }
+    if (!it.blob) { it.error = "Billedet kunne ikke åbnes, så det kan ikke gemmes."; renderItem(it); return false; }
+    const key = keyFor(d);
+    const before = species();
+    const isNew = !before.has(key);
+    const no = isNew ? before.size + 1 : before.get(key).no;
+    it.status = "saving"; it.error = ""; renderItem(it);
+
+    // Saving a known species keeps that species' own name so the dex stays tidy.
+    const base = isNew ? d : { ...before.get(key).info, ...d, name: before.get(key).info.name, latin: before.get(key).info.latin || d.latin };
+    const doc = {
+      key, name: base.name, nameEn: base.nameEn || "", latin: base.latin || "", category: base.category || "andet",
+      types: base.types || [], rarity: base.rarity || "almindelig", description: base.description || "",
+      funFact: base.funFact || "", size: base.size || "", habitat: base.habitat || "",
+      stats: base.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
+      source: it.result && !it.noAnimal ? "ai" : "manuel", createdAt: Date.now(), assetId: null,
+    };
+    let uploaded = null;
+    try {
+      if (state.memory) {
+        const id = "mem-" + (++uid);
+        memUrls.set(id, it.url);
+        state.sightings.push({ id, ...doc });
+        removeItem(it, true);
+        render();
+      } else {
+        uploaded = await state.assets.upload(it.blob, { type: "image/jpeg" });
+        doc.assetId = uploaded.id;
+        await state.db.collection("sightings").add(doc);
+        uploaded = null;
+        removeItem(it);
+      }
+      refreshStatusLines();
+      if (isNew && !quiet) celebrate({ ...doc, src: doc.assetId ? "/_blob/" + doc.assetId : it.url }, no);
+      else if (!quiet) toast(isNew ? `${doc.name} er låst op som #${pad(no)}` : `Nyt billede tilføjet til ${doc.name}`);
+      return isNew ? doc.name : true;
+    } catch (e) {
+      if (uploaded) state.assets.delete(uploaded.id).catch(() => {});
+      it.status = "ready";
+      it.error = saveError(e?.code);
+      renderItem(it);
+      return false;
+    }
+  }
+  function saveError(code) {
+    if (code === "quota_or_state") return "Der er ikke mere plads til billeder i denne Dyredex. Slet nogle billeder og prøv igen.";
+    if (code === "too_large") return "Billedet er for stort til at gemme.";
+    if (code === "rate_limited") return "Du gemmer hurtigt. Vent et øjeblik og prøv igen.";
+    if (code === "not_granted" || code === "permission_denied" || code === "not_writer") return "Du har ikke adgang til at gemme i denne Dyredex.";
+    return "Billedet kunne ikke gemmes. Prøv igen.";
+  }
+
+  async function saveAll() {
+    const ready = state.queue.filter(i => i.status === "ready");
+    let newOnes = [], saved = 0;
+    for (const it of ready) {
+      const r = await saveItem(it, true);
+      if (r) saved++;
+      if (typeof r === "string") newOnes.push(r);
+    }
+    toast(`${saved} billeder gemt` + (newOnes.length ? ` · ${newOnes.length} nye dyr låst op: ${newOnes.join(", ")}` : ""));
+  }
+
+  /* ---------- unlock moment ---------- */
+  function celebrate(doc, no) {
+    const root = $("#unlock-root");
+    root.innerHTML = `<div class="unlock" role="dialog" aria-modal="true" aria-label="Nyt dyr låst op">
+      <div class="flash"></div>
+      <div class="card-u">
+        <div class="label">Nyt dyr låst op!</div>
+        <img src="${esc(doc.src)}" alt="">
+        <div class="u-body">
+          <span class="mono">#${pad(no)}</span>
+          <h3>${esc(doc.name)}</h3>
+          <div class="row" style="display:flex;gap:8px;align-items:center">${catHtml(doc.category)}${rarityHtml(doc.rarity)}</div>
+          <button class="btn" id="unlock-ok">Fedt!</button>
+        </div>
+      </div>
+    </div>`;
+    const close = () => { root.innerHTML = ""; };
+    $("#unlock-ok").focus();
+    $("#unlock-ok").onclick = close;
+    root.querySelector(".unlock").onclick = e => { if (e.target.classList.contains("unlock")) close(); };
+    root.querySelector(".unlock").onkeydown = e => { if (e.key === "Escape") close(); };
+  }
+
+  /* ---------- detail ---------- */
+  let openKey = null, photoIdx = 0, confirmDel = false;
+  function openDetail(key) {
+    openKey = key; photoIdx = 0; confirmDel = false;
+    renderDetail();
+    const dlg = $("#detail");
+    if (!dlg.open) dlg.showModal();
+  }
+  function renderDetail() {
+    const dlg = $("#detail");
+    const sp = species().get(openKey);
+    if (!sp) { if (dlg.open) dlg.close(); return; }
+    photoIdx = Math.min(photoIdx, sp.photos.length - 1);
+    const p = sp.photos[photoIdx];
+    const i = sp.info;
+    const canDelete = state.memory || !!state.assets;
+    dlg.innerHTML = `<div class="detail">
+      <div class="media">
+        <div class="big"><img src="${esc(photoSrc(p))}" alt="${esc(i.name)}"></div>
+        ${sp.photos.length > 1 ? `<div class="thumbs">${sp.photos.map((ph, n) => `<button data-ph="${n}" aria-label="Billede ${n + 1}" aria-current="${n === photoIdx}"><img src="${esc(photoSrc(ph))}" alt=""></button>`).join("")}</div>` : ""}
+        <div class="photo-meta">
+          <span>Fanget ${esc(fmtDate(p.createdAt))}${sp.photos.length > 1 ? ` · billede ${photoIdx + 1} af ${sp.photos.length}` : ""}</span>
+          ${canDelete ? (confirmDel
+            ? `<span style="display:flex;gap:6px"><button class="btn danger small" data-act="del-yes">Slet billedet</button><button class="btn ghost small" data-act="del-no" style="color:var(--screen-fg)">Behold</button></span>`
+            : `<button class="btn ghost small" data-act="del" style="color:var(--screen-fg);box-shadow:inset 0 0 0 1px var(--screen-line)">Slet billede</button>`) : ""}
+        </div>
+      </div>
+      <div class="info">
+        <div class="top">
+          <div style="min-width:0">
+            <span class="no">#${pad(sp.no)}</span>
+            <h2 id="d-name">${esc(i.name)}</h2>
+            ${i.latin ? `<p class="latin">${esc(i.latin)}${i.nameEn ? ` · ${esc(i.nameEn)}` : ""}</p>` : ""}
+          </div>
+          <button class="close" data-act="close" aria-label="Luk">✕</button>
+        </div>
+        <div class="types">${catHtml(i.category)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity)}</div>
+        ${i.description ? `<p class="entry">${esc(i.description)}</p>` : ""}
+        ${(i.size || i.habitat) ? `<dl class="facts">${i.size ? `<dt>Størrelse</dt><dd>${esc(i.size)}</dd>` : ""}${i.habitat ? `<dt>Levested</dt><dd>${esc(i.habitat)}</dd>` : ""}<dt>Sjældenhed</dt><dd>${esc(RARITY_LABEL[i.rarity] || "Almindelig")}</dd><dt>Første fund</dt><dd>${esc(fmtDate(sp.photos[0].createdAt))}</dd></dl>` : ""}
+        ${i.stats ? `<div class="stats">${STATS.map(([k, label]) => { const v = clamp(i.stats[k], 0, 10); return `<div class="stat"><span>${label}</span><span class="bar"><i style="width:${v * 10}%"></i></span><b>${v}</b></div>`; }).join("")}</div>` : ""}
+        ${i.funFact ? `<p class="fun"><strong>Vidste du?</strong> ${esc(i.funFact)}</p>` : ""}
+      </div>
+    </div>`;
+  }
+  async function deletePhoto() {
+    const sp = species().get(openKey);
+    const p = sp?.photos[photoIdx];
+    if (!p) return;
+    try {
+      if (state.memory) {
+        state.sightings = state.sightings.filter(s => s.id !== p.id);
+        URL.revokeObjectURL(memUrls.get(p.id)); memUrls.delete(p.id);
+        render();
+      } else {
+        await state.db.collection("sightings").doc(p.id).delete();
+        if (p.assetId) state.assets.delete(p.assetId).catch(() => {});
+      }
+      confirmDel = false; photoIdx = Math.max(0, photoIdx - 1);
+      toast(sp.photos.length > 1 ? "Billedet er slettet" : `${sp.info.name} er fjernet fra samlingen`);
+      renderDetail();
+    } catch {
+      toast("Billedet kunne ikke slettes. Prøv igen.");
+    }
+  }
+
+  /* ---------- misc UI ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 4200);
+  }
+  function showNotice(msg) { const n = $("#notice"); n.textContent = msg; n.hidden = !msg; }
+  const pick = () => $("#file").click();
+
+  /* ---------- events ---------- */
+  const drop = $("#drop");
+  drop.addEventListener("click", pick);
+  drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  $("#file").addEventListener("change", e => { addFiles([...e.target.files]); e.target.value = ""; });
+  window.addEventListener("dragover", e => { e.preventDefault(); });
+  window.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+  drop.addEventListener("dragenter", () => drop.classList.add("over"));
+  drop.addEventListener("dragleave", e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove("over"); });
+  document.addEventListener("paste", e => {
+    const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
+    if (files.length) { e.preventDefault(); addFiles(files); }
+  });
+
+  $("#queue").addEventListener("click", e => {
+    const el = e.target.closest(".scan"); if (!el) return;
+    const it = state.queue.find(i => String(i.id) === el.dataset.id); if (!it) return;
+    const alt = e.target.closest("[data-alt]");
+    if (alt) {
+      const a = it.result.alternatives[Number(alt.dataset.alt)];
+      readDraft(it);
+      it.draft.name = String(a.name || ""); it.draft.latin = String(a.latin || "");
+      it.draft.description = ""; it.draft.funFact = ""; it.draft.stats = null; it.draft.size = ""; it.draft.habitat = "";
+      renderItem(it); return;
+    }
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "save") saveItem(it);
+    else if (act === "discard") removeItem(it);
+    else if (act === "retry" || act === "rescan") { it.status = "prep"; it.error = ""; renderItem(it); pump(); }
+  });
+  $("#queue").addEventListener("input", e => {
+    const el = e.target.closest(".scan"); if (!el || !e.target.dataset.k) return;
+    const it = state.queue.find(i => String(i.id) === el.dataset.id); if (!it) return;
+    readDraft(it);
+    const st = el.querySelector(".status");
+    const tmp = document.createElement("div"); tmp.innerHTML = itemHtml(it);
+    st.replaceWith(tmp.querySelector(".status"));
+    const btn = el.querySelector('[data-act="save"]');
+    if (btn) btn.textContent = species().has(keyFor(it.draft)) ? "Tilføj billede" : "Tilføj til Dyredex";
+  });
+  $("#queue-head").addEventListener("click", e => {
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "save-all") saveAll();
+    if (act === "clear") for (const it of [...state.queue]) if (it.status !== "saving") removeItem(it);
+  });
+
+  $("#chips").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; state.filter = b.dataset.f; render(); });
+  $("#q").addEventListener("input", e => { state.q = e.target.value; renderGrid([...species().values()]); });
+  $("#sort").addEventListener("change", e => { state.sort = e.target.value; renderGrid([...species().values()]); });
+  $("#grid").addEventListener("click", e => {
+    if (e.target.closest("[data-pick]")) { pick(); return; }
+    const c = e.target.closest(".card[data-key]"); if (c) openDetail(c.dataset.key);
+  });
+  $("#grid").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-pick]")) { e.preventDefault(); pick(); } });
+
+  const dlg = $("#detail");
+  dlg.addEventListener("click", e => {
+    if (e.target === dlg) { dlg.close(); return; }
+    const ph = e.target.closest("[data-ph]");
+    if (ph) { photoIdx = Number(ph.dataset.ph); confirmDel = false; renderDetail(); return; }
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "close") dlg.close();
+    else if (act === "del") { confirmDel = true; renderDetail(); }
+    else if (act === "del-no") { confirmDel = false; renderDetail(); }
+    else if (act === "del-yes") deletePhoto();
+  });
+  dlg.addEventListener("close", () => { openKey = null; });
+
+  /* ---------- boot ---------- */
+  function setCanAdd(v) {
+    state.canAdd = v;
+    $("#scanner").hidden = !v;
+  }
+
+  async function boot() {
+    render();
+    if (!window.claude?.use) {
+      state.memory = true;
+      showNotice("Denne kopi kører uden for Claude, så AI-genkendelse er slået fra og dyr gemmes kun, indtil du lukker siden.");
+      return;
+    }
+    showNotice("Forbinder til din Dyredex…");
+    const [db, assets, sample] = await Promise.all(["db", "assets", "sample"].map(n => claude.use(n).catch(() => null)));
+    state.db = db; state.assets = assets; state.sample = sample;
+    if (sample) {
+      const lim = await sample.limits().catch(() => null);
+      state.vision = !!lim?.images;
+    }
+    if (!db) {
+      state.memory = true;
+      showNotice(state.vision
+        ? "Log ind på Claude for at gemme din samling. Indtil da huskes dyrene kun, mens siden er åben."
+        : "Samlingen kan ikke gemmes i denne visning. Dyr huskes kun, mens siden er åben.");
+    } else {
+      showNotice("");
+      if (!assets) {
+        setCanAdd(false);
+        showNotice("Du ser en andens Dyredex. Kun ejeren kan tilføje nye dyr.");
+      } else if (!state.vision) {
+        showNotice("AI-genkendelse er ikke tilgængelig her. Du kan stadig tilføje dyr ved at skrive navnet selv.");
+      }
+      db.collection("sightings").orderBy("createdAt", "asc").onSnapshot(snap => {
+        state.sightings = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.key && s.name);
+        render();
+        refreshStatusLines();
+        if (openKey) renderDetail();
+      }, () => showNotice("Samlingen kunne ikke hentes. Genindlæs siden for at prøve igen."));
+    }
+    for (const it of state.queue) if (it.status === "ready" && !it.result && state.vision) it.status = "prep";
+    pump();
+  }
+  boot();
+})();
+</script>
