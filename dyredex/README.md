@@ -13,7 +13,7 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 - **Achievements:** 32 badges i fanen "Achievements": Big 5, Big 7, Little 5, Ugly 5 og Danmarks Big 5, dyregrupper (kattedyr, menneskeaber, bjørne, skorpioner …), medaljer i bronze, sølv og guld for hver region, rejser og tid (Globetrotter, Natugle, Alle årstider, Safaridag …), samling og nogle sjove. De beregnes ud fra dine fund, og nye badges fejres med en pop-up.
 - **Album-import:** "Importér fotoalbum" tager mange billeder på én gang (træk-og-slip af mere end 5 billeder gør det samme). Billeder af arter, du allerede har, springes over, ligesom billeder uden dyr og billeder, der allerede er importeret (genkendt på filnavn, størrelse og dato). Nye arter, som AI'en er mindst 75 % sikker på at have bestemt til art, registreres automatisk. Resten lægges til gennemsyn. To billeder scannes ad gangen, og importen sættes på pause, hvis grænsen for AI-kald rammes.
 - **Kun ægte dyr:** AI'en tjekker først, om det er et ægte dyr. Statuer, figurer, legetøj, tegninger, udstoppede dyr og dyr på skærme eller skilte kan ikke registreres (album-importen springer dem over). Tager AI'en fejl, kan du trykke "Det er et ægte dyr".
-- **3D-figurer:** Tryk "3D" på et fanget dyr, så bygger AI'en en lavpolygon-figur af arten ud fra dit billede, med farver, mønstre og kendetegn. Figuren består af simple former (box, ellipsoid, cylinder, cone), gemmes i `models`-samlingen og tegnes med three.js. Den drejer langsomt rundt, og du kan dreje den med fingeren eller musen. Hvis siden får lov til at læse telefonens bevægelsessensor, kan du også vippe telefonen.
+- **Holo-kort:** Tryk "HOLO-KORT" på et fanget dyr for at se dit foto som et samlekort med navn, nummer, typer, stats og regnbue-glimmer. Glimmeret er stærkere jo sjældnere dyret er. Kortet vipper, når du trækker over det, og ellers svajer det lidt af sig selv. AI'en tegner dyrets omrids (det kommer med ved nye scanninger, og ældre billeder får det med "Lad dyret poppe ud"), så dyret ligger på et lag foran baggrunden og popper ud, når kortet vipper. Hvis siden får lov til at læse telefonens bevægelsessensor, kan du også vippe telefonen.
 - **Sted og tid:** GPS-position og optagelsestidspunkt læses fra billedets EXIF-data (JPEG og WebP), før billedet gøres mindre. De sendes med til AI'en som hjælp til at bestemme arten, og stedet får et navn. Mangler billedet GPS, kan du skrive stedet selv.
 - **Betjening:** SCAN-knappen vælger billeder (flere ad gangen). Du kan også trække dem ind eller sætte ind med Ctrl+V. D-pad'en og piletasterne bladrer i dex'en.
 
@@ -25,7 +25,7 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 | --- | --- |
 | `sample` (med billeder) | AI-genkendelse og den grundige artsbestemmelse |
 | `assets` | Gemmer billederne |
-| `db` | Gemmer fundene (`sightings`) og 3D-figurerne (`models`) |
+| `db` | Gemmer fundene (`sightings`), inklusive dyrets omrids til holo-kortet |
 
 Kataloget ligger i `RAW` øverst i scriptet som linjer på formen `Navn|Latinsk navn|gruppekode|emoji`. Emojien vises som silhuet, indtil dyret er fanget. Fund matches til kataloget på det latinske navn.
 
