@@ -1,16 +1,17 @@
 # Dyredex
 
-En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (Claude) fortæller hvilket dyr det er. Første gang du fanger en art, bliver den "låst op" med sit eget nummer i samlingen.
+En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (Claude) bestemmer arten. Første gang du fanger en art, bliver den registreret med sit nummer, og silhuetten i Dyredex'en bliver til dit eget billede.
 
 **Live version:** https://claude.ai/artifact/5Ezc6rr2SdyGsGF4NBZ2AC
 
 ## Sådan virker det
 
-- **Scan:** Vælg et eller flere billeder, træk dem ind, eller sæt ind med Ctrl+V. Billederne bliver gjort mindre (max 1600 px) i browseren, før de sendes videre.
-- **Genkendelse:** Billedet sendes til Claude, som svarer med dansk navn, latinsk navn, dyregruppe, sjældenhed, en kort Pokédex-tekst, en sjov fakta og "stats". Hvis AI'en er i tvivl, viser den op til tre andre bud, og du kan altid rette navnet selv.
-- **Sted og tid:** GPS-position og optagelsestidspunkt læses fra billedets EXIF-data (JPEG og WebP), før billedet bliver gjort mindre. De sendes med til AI'en, så den kan vurdere hvilke arter der lever dér på den årstid, og AI'en giver stedet et navn ud fra koordinaterne. Mangler billedet GPS, kan du skrive stedet selv (et standard-sted huskes i browseren). Hvert fund gemmer `place`, `geo` og `takenAt`, og fra dyrets side kan du åbne stedet på OpenStreetMap.
-- **Samling:** Hvert billede gemmes som et fund. Fund af samme art (samme latinske navn) samles under ét nummer, så du kan have flere billeder af fx en rødræv.
-- **Filtrering:** Søg, filtrér på dyregruppe og sortér efter nummer, navn, nyeste eller sjældenhed.
+- **Katalog med silhuetter:** 187 dyr fordelt på 8 regioner (Danmark, Europa, Afrika, Asien, Nordamerika, Sydamerika, Australien, Hav & is). Dyr, du ikke har fanget, vises som sorte silhuetter med `???`. Du kan afsløre et enkelt navn eller slå "Vis navne" til.
+- **Regionale dexer:** Hver region har sin egen fremgang (fx `Afrika 1/27`), og Nationaldex'en viser det samlede tal.
+- **Bonusdyr:** Fanger du en art, der ikke står i kataloget, får den et nummer efter kataloget (mærket B) og lægges i den region, hvor arten naturligt lever.
+- **Præcis art:** AI'en skal altid bestemme arten (og race eller underart, hvis det kan ses), ikke bare "skorpion" eller "bille". Den forklarer, hvilke kendetegn der peger på arten, og foreslår lignende arter. "Bestem præcis art" kører en grundigere analyse af et gemt billede og kan flytte det til den rigtige art.
+- **Sted og tid:** GPS-position og optagelsestidspunkt læses fra billedets EXIF-data (JPEG og WebP), før billedet gøres mindre. De sendes med til AI'en som hjælp til at bestemme arten, og stedet får et navn. Mangler billedet GPS, kan du skrive stedet selv.
+- **Betjening:** SCAN-knappen vælger billeder (flere ad gangen). Du kan også trække dem ind eller sætte ind med Ctrl+V. D-pad'en og piletasterne bladrer i dex'en.
 
 ## Teknik
 
@@ -18,8 +19,10 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 
 | Funktion | Bruges til |
 | --- | --- |
-| `sample` (med billeder) | AI-genkendelse af dyret |
+| `sample` (med billeder) | AI-genkendelse og den grundige artsbestemmelse |
 | `assets` | Gemmer billederne |
 | `db` | Gemmer fundene (`sightings`-samlingen) |
 
-Åbner du filen direkte i en browser uden for Claude, virker den stadig, men uden AI og uden at gemme: du skriver selv navnet, og samlingen forsvinder, når siden lukkes.
+Kataloget ligger i `RAW` øverst i scriptet som linjer på formen `Navn|Latinsk navn|gruppekode|emoji`. Emojien vises som silhuet, indtil dyret er fanget. Fund matches til kataloget på det latinske navn.
+
+Åbner du filen direkte i en browser uden for Claude, virker den stadig, men uden AI og uden at gemme.
