@@ -1088,6 +1088,11 @@ Sydkaper|Eubalaena australis|m|🐋`,
     return `Du er motoren i en "Dyredex": en Pokédex for rigtige dyr, som brugeren selv har fotograferet.
 Se på billedet og identificér det dyr, der er hovedmotivet. Husdyr, kæledyr og dyr i zoo og akvarier tæller også.
 
+Tjek FØRST, om det er et ÆGTE dyr af kød og blod, fotograferet i virkeligheden. Det tæller IKKE som ægte:
+statuer, skulpturer, figurer, legetøj, bamser, kostumer, tegninger, malerier, graffiti, mosaikker, udstoppede dyr, skeletter, fossiler,
+og dyr der kun ses på en skærm, plakat, skilt, i en bog eller på et andet foto. Kig efter tegn som ens farve og overflade (sten, metal, plastik, træ, gips),
+en sokkel, mangel på pels- eller hudstruktur, unaturlige proportioner, stive poser og glasøjne. Er du i tvivl, så sæt "isReal" til false og forklar hvorfor.
+
 Vær så SPECIFIK som muligt. Bestem altid arten, og underart eller race hvis den kan ses (fx hunde-, katte-, heste- og hønseracer).
 Skriv aldrig bare en gruppe som "skorpion", "edderkop", "bille" eller "orangutang", hvis du kan vurdere den konkrete art.
 Er du i tvivl mellem nært beslægtede arter, så vælg den mest sandsynlige ud fra kendetegnene på billedet, stedet og årstiden, og læg de andre i "alternatives".
@@ -1096,6 +1101,8 @@ ${ctx.length ? `\n${ctx.join(" ")}\nBrug sted og tidspunkt til at vurdere, hvilk
 Svar KUN med ét JSON-objekt i præcis dette format:
 {
   "isAnimal": true,
+  "isReal": true eller false (false hvis det er en statue, figur, tegning, udstoppet dyr, skærmbillede osv.),
+  "fake": "hvis isReal er false: kort beskrivelse på dansk af hvad det er, fx 'statue af en giraf i bronze' (ellers tom streng)",
   "name": "dansk navn på arten med stort forbogstav, fx Gul tykhalet skorpion",
   "nameEn": "engelsk navn",
   "latin": "videnskabeligt navn på artsniveau, fx Androctonus australis",
@@ -1135,6 +1142,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       size: String(r.size || "").trim(), habitat: String(r.habitat || "").trim(), idTips: String(r.idTips || "").trim(),
       stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(r.stats?.[k], 1, 10)])),
       confidence: clamp(r.confidence, 0, 1), place,
+      notReal: r.isReal === false, fake: String(r.fake || "").trim(),
     };
     const cat = CATALOG_BY_KEY.get(keyFor(d));
     if (cat) Object.assign(d, { name: cat.name, latin: cat.latin, region: cat.region, category: cat.cat });
@@ -1169,7 +1177,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
           ${imp.paused && !imp.finished ? `<button class="btn sm" data-act="imp-resume">Fortsæt import</button>` : ""}
           ${imp.finished ? `<button class="btn ghost-dark sm" data-act="imp-close">Luk</button>` : `<button class="btn ghost-dark sm" data-act="imp-stop">Stop import</button>`}</div>
         <span class="meter"><i style="width:${pct}%"></i></span>
-        <div class="row"><span>${imp.added.length} NYE ARTER</span><span>${imp.skipped} KENDTE SPRUNGET OVER</span>${imp.dupes ? `<span>${imp.dupes} ALLEREDE IMPORTERET</span>` : ""}<span>${imp.none} UDEN DYR</span><span>${imp.review} TIL GENNEMSYN</span></div>
+        <div class="row"><span>${imp.added.length} NYE ARTER</span><span>${imp.skipped} KENDTE SPRUNGET OVER</span>${imp.dupes ? `<span>${imp.dupes} ALLEREDE IMPORTERET</span>` : ""}<span>${imp.none} UDEN DYR</span>${imp.fake ? `<span>${imp.fake} IKKE ÆGTE DYR</span>` : ""}<span>${imp.review} TIL GENNEMSYN</span></div>
         ${imp.paused && !imp.finished ? `<span style="font-size:17px;opacity:.85">Du har scannet mange billeder på kort tid. Vent et par minutter, og tryk så Fortsæt import.</span>` : ""}
       </div>`;
     }
@@ -1190,11 +1198,12 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     else if (it.status === "saving") s = "<span>GEMMER…</span>";
     else if (it.status === "paused") s = `<span class="tag warn">PAUSE</span>`;
     else if (d.noAnimal) s = `<span class="tag warn">INTET DYR FUNDET</span>`;
+    else if (d.notReal) s = `<span class="tag warn">IKKE ET ÆGTE DYR</span>`;
     else if (caught) s = `<span class="tag known">ALLEREDE FANGET · No.${pad(e.no)}</span>`;
     else if (e) s = `<span class="tag new">NYT DYR · No.${pad(e.no)}</span>`;
     else if (d.name) s = `<span class="tag bonus">NYT BONUSDYR</span>`;
     else s = "<span>SKRIV HVILKET DYR DET ER</span>";
-    if (it.status === "ready" && it.result && !d.noAnimal) {
+    if (it.status === "ready" && it.result && !d.noAnimal && !d.notReal) {
       const pct = Math.round((d.confidence || 0) * 100);
       s += `<span>SIKKER <span class="conf"><i style="width:${pct}%"></i></span> ${pct}%</span>`;
       if (d.specificity && d.specificity !== "art") s += `<span>NIVEAU: ${esc(d.specificity.toUpperCase())}</span>`;
@@ -1224,11 +1233,13 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
           <div class="field"><label for="p-${it.id}">Sted</label><input id="p-${it.id}" data-k="place" value="${esc(d.place)}" placeholder="Hvor er billedet taget?" ${editable ? "" : "disabled"}></div>
         </div>
         ${alts.length ? `<div class="alts"><span>Eller måske:</span>${alts.map((a, n) => `<button data-alt="${n}">${esc(a.name)}</button>`).join("")}</div>` : ""}
-        ${d.idTips ? `<p class="small"><strong>Kendetegn:</strong> ${esc(d.idTips)}</p>` : ""}
+        ${d.notReal ? `<p class="small"><strong>Det ligner ${esc(d.fake || "en efterligning af et dyr")}.</strong> Kun ægte dyr kan registreres. Statuer, figurer, legetøj, tegninger, udstoppede dyr og dyr på skærme tæller ikke.</p>` : ""}
+        ${!d.notReal && d.idTips ? `<p class="small"><strong>Kendetegn:</strong> ${esc(d.idTips)}</p>` : ""}
         ${it.error ? `<p class="err">${esc(it.error)}</p>` : ""}
         <div class="actions">
           ${it.status === "paused" ? `<button class="btn blue sm" data-act="retry">Scan igen</button>` : ""}
-          ${it.status === "ready" ? `<button class="btn" data-act="save" ${state.canAdd ? "" : "disabled"}>${caught ? "Tilføj billede" : "Registrér i Dyredex"}</button>` : ""}
+          ${it.status === "ready" && !d.notReal ? `<button class="btn" data-act="save" ${state.canAdd ? "" : "disabled"}>${caught ? "Tilføj billede" : "Registrér i Dyredex"}</button>` : ""}
+          ${it.status === "ready" && d.notReal ? `<button class="btn ghost sm" data-act="real">Det er et ægte dyr</button>` : ""}
           ${it.status === "ready" && state.vision ? `<button class="btn ghost sm" data-act="rescan">Scan igen</button>` : ""}
           <button class="btn ghost sm" data-act="discard" ${it.status === "saving" ? "disabled" : ""}>Kassér</button>
         </div>`}
@@ -1266,7 +1277,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     if (!imgs.length) { toast("Vælg et billede (JPG, PNG, WebP eller GIF)"); return; }
     if (auto && !state.vision) { auto = false; toast("AI-genkendelse er ikke tilgængelig, så hvert billede skal navngives"); }
     if (auto) {
-      if (!state.import || state.import.finished) state.import = { total: 0, done: 0, added: [], skipped: 0, dupes: 0, none: 0, review: 0, paused: false, finished: false };
+      if (!state.import || state.import.finished) state.import = { total: 0, done: 0, added: [], skipped: 0, dupes: 0, none: 0, fake: 0, review: 0, paused: false, finished: false };
       state.import.total += imgs.length;
     }
     for (const f of imgs) {
@@ -1307,6 +1318,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   async function autoDecide(it) {
     const d = it.draft, key = keyFor(d);
     if (d.noAnimal || !d.name) return autoDone(it, "none");
+    if (d.notReal) return autoDone(it, "fake");
     if (caughtMap().has(key) || importKeys.has(key)) return autoDone(it, "skipped");
     const sure = (d.confidence || 0) >= 0.75 && ["art", "underart", "race", ""].includes(d.specificity || "");
     if (!sure) return toReview(it);
@@ -1389,6 +1401,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
 
   async function saveItem(it, quiet) {
     const d = readDraft(it);
+    if (d.notReal) { it.error = "Kun ægte dyr kan registreres."; renderItem(it); return false; }
     if (!d.name) { it.error = "Giv dyret et navn først."; renderItem(it); document.getElementById("n-" + it.id)?.focus(); return false; }
     if (!it.blob) { it.error = "Billedet kunne ikke åbnes, så det kan ikke gemmes."; renderItem(it); return false; }
     const key = keyFor(d);
@@ -1454,7 +1467,9 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       const d = toDraft(r, p.place, false);
       state.refine = d.noAnimal || !d.name
         ? { sid: p.id, status: "error", error: "AI'en fandt ikke et dyr ved den grundige analyse." }
-        : { sid: p.id, status: "done", draft: d, result: r };
+        : d.notReal
+          ? { sid: p.id, status: "error", error: `AI'en mener ikke, at det er et ægte dyr: ${d.fake || "det ligner en efterligning"}. Overvej at slette billedet.` }
+          : { sid: p.id, status: "done", draft: d, result: r };
     } catch (e) {
       if (state.refine?.ctl !== ctl) return;
       if (DISABLED.includes(e?.code)) state.vision = false;
@@ -1597,6 +1612,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     }
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "save") saveItem(it);
+    else if (act === "real") { readDraft(it); it.draft.notReal = false; it.draft.overridden = true; renderItem(it); }
     else if (act === "discard") removeItem(it);
     else if (act === "retry" || act === "rescan") { readDraft(it); it.status = "prep"; it.error = ""; renderItem(it); pump(); }
   });
