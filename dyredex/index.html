@@ -360,9 +360,6 @@
   .missions li.done .t { text-decoration: line-through; opacity: .7; }
   .missions .all { color: var(--yellow); }
   .tools select { padding: 7px 10px; border-radius: 7px; border: 0; background: var(--tile); color: var(--tile-ink); }
-  .eff { font-style: normal; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 4px; margin-left: 4px; color: #fff; }
-  .eff.up { background: #2f9e55; } .eff.down { background: #8d8d8d; }
-  .kkmini { font-family: var(--font-lcd); font-size: 13px; color: var(--tile-dim); }
   .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   .confetti i { position: absolute; top: -14px; left: var(--x); width: 8px; height: 13px; background: var(--c); border-radius: 2px; opacity: 0; animation: fall 2.6s var(--d) cubic-bezier(.3, .6, .5, 1) forwards; }
   @keyframes fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(105vh) rotate(760deg); } }
@@ -417,55 +414,51 @@
   .btn.ink { background: var(--tile-ink); box-shadow: none; }
   @media (max-width: 520px) { .tabs button { font-size: 12px; padding: 8px 4px; letter-spacing: .02em; } }
 
-  /* ---------- battle ---------- */
+  /* ---------- battle: pick a line-up, then a narrated fight ---------- */
   .battle { display: grid; gap: 12px; }
-  .b-pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  @media (max-width: 640px) { .b-pick { grid-template-columns: minmax(0, 1fr); } }
-  .b-side { background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 10px; display: grid; gap: 8px; align-content: start; box-shadow: inset 0 -4px 0 var(--bezel-lo); min-width: 0; }
-  .b-side h3 { font-family: var(--font-display); font-size: 17px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .b-side select { padding: 6px 8px; border-radius: 7px; border: 1px solid #d3d1c7; background: #fff; color: var(--tile-ink); max-width: 100%; }
-  .b-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; max-height: 290px; overflow-y: auto; }
+  .b-panel { background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 10px; display: grid; gap: 8px; align-content: start; box-shadow: inset 0 -4px 0 var(--bezel-lo); min-width: 0; }
+  .b-panel h3 { font-family: var(--font-display); font-size: 17px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .b-panel select { padding: 6px 8px; border-radius: 7px; border: 1px solid #d3d1c7; background: #fff; color: var(--tile-ink); max-width: 100%; }
+  .b-lineup { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  .b-chip { background: #ebe9df; border-radius: 10px; padding: 6px 8px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-width: 0; }
+  .b-chip.champ { box-shadow: 0 0 0 3px var(--yellow); background: #fbf3d3; }
+  .b-chip img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: block; }
+  .b-chip b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .b-chip small { font-size: 12px; color: var(--tile-dim); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .b-chip .acts { display: flex; gap: 4px; }
+  .b-chip .acts button { border: 0; background: #fff; border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 15px; color: var(--tile-ink); }
+  .b-chip .acts button[aria-pressed="true"] { background: var(--yellow); }
+  .b-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; max-height: 300px; overflow-y: auto; }
   .b-roster button { border: 0; padding: 4px; border-radius: 8px; background: #ebe9df; cursor: pointer; display: grid; gap: 2px; font-size: 11px; text-align: center; color: var(--tile-ink); min-width: 0; }
   .b-roster img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; display: block; }
   .b-roster span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .b-roster button[aria-pressed="true"] { background: var(--yellow); box-shadow: 0 0 0 2px var(--tile-ink); }
   .b-empty { color: var(--tile-dim); font-size: 13px; margin: 0; }
+  .kkmini { font-family: var(--font-lcd); font-size: 13px; color: var(--tile-dim); }
   .b-go { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .b-go .btn { font-size: 17px; padding: 12px 22px; font-family: var(--font-display); letter-spacing: .05em; text-transform: uppercase; }
-  .arena { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 12px; overflow: hidden;
-    background: linear-gradient(180deg, #cfe8f5 0%, #eaf4dc 50%, #b9d79a 51%, #98bf74 100%); box-shadow: inset 0 0 0 4px var(--case-lo); }
-  @media (max-width: 520px) { .arena { aspect-ratio: 1 / 1; } }
-  .plat { position: absolute; border-radius: 50%; background: rgb(55 85 35 / .35); }
-  .plat.foe { right: 7%; top: 42%; width: 36%; height: 11%; }
-  .plat.me { left: 3%; bottom: 5%; width: 42%; height: 12%; }
-  .spr { position: absolute; aspect-ratio: 1; border-radius: 50%; overflow: hidden; border: 4px solid #fff; box-shadow: 0 6px 14px rgb(0 0 0 / .3); background: #ddd; transition: transform .22s, opacity .5s, filter .2s; }
-  .spr img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .spr.foe { right: 12%; top: 10%; width: 26%; }
-  .spr.me { left: 8%; bottom: 10%; width: 32%; }
-  .spr.me.lunge { transform: translate(22%, -18%); }
-  .spr.foe.lunge { transform: translate(-22%, 18%); }
-  .spr.hit { animation: shake .38s; filter: brightness(1.9) saturate(.3); }
-  .spr.ko { opacity: 0; transform: translateY(35%) scale(.8); }
-  @keyframes shake { 20% { translate: -7px 0; } 40% { translate: 7px 0; } 60% { translate: -4px 0; } 80% { translate: 4px 0; } }
-  .ibox { position: absolute; background: #fbf8ec; color: #1b1d21; border-radius: 10px; padding: 6px 10px; width: min(48%, 260px); box-shadow: 0 3px 0 #b9b39a, 0 0 0 2px #59574c; font-size: 13px; }
-  .ibox.foe { left: 4%; top: 6%; }
-  .ibox.me { right: 4%; bottom: 8%; }
-  .ibox .nm { display: flex; justify-content: space-between; gap: 6px; font-weight: 700; }
-  .ibox .nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ibox .nm span { font-family: var(--font-lcd); font-weight: 400; font-size: 17px; flex: none; }
-  .ibox .who { font-size: 11px; color: #6b6a5e; }
-  .hpbar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px; align-items: center; font-family: var(--font-lcd); font-size: 15px; margin-top: 2px; }
-  .hpbar .bar { height: 8px; border-radius: 4px; background: #d8d3bd; overflow: hidden; }
-  .hpbar .bar i { display: block; height: 100%; background: #2fbf55; transition: width .5s ease, background-color .3s; }
-  .hpbar .bar i.mid { background: #e6b422; } .hpbar .bar i.low { background: #d8322f; }
-  .ibox .num { text-align: right; font-family: var(--font-lcd); font-size: 16px; }
-  .ibox .st { font-size: 11px; color: #6a1fa0; font-weight: 700; min-height: 0; }
-  .bmsg { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 12px 14px; min-height: 64px; font-family: var(--font-lcd); font-size: 22px; line-height: 1.2; box-shadow: inset 0 0 0 3px var(--case-lo); }
-  .bmoves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .bmoves button { border: 0; border-radius: 10px; padding: 8px 10px; text-align: left; cursor: pointer; background: var(--tile); color: var(--tile-ink); box-shadow: inset 0 -4px 0 var(--bezel-lo); display: grid; gap: 1px; min-width: 0; }
-  .bmoves button:disabled { opacity: .5; cursor: default; }
-  .bmoves b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bmoves small { font-size: 12px; color: var(--tile-dim); }
+  .b-go .btn.big { font-size: 17px; padding: 12px 22px; font-family: var(--font-display); letter-spacing: .05em; text-transform: uppercase; }
+  .b-go select { padding: 9px 10px; border-radius: 8px; border: 0; background: var(--tile); color: var(--tile-ink); max-width: 100%; }
+  .b-fighters { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .b-f { position: relative; background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 8px 4px 6px; text-align: center; display: grid; gap: 2px; justify-items: center; min-width: 0; transition: opacity .6s, filter .6s, box-shadow .3s; box-shadow: inset 0 -4px 0 var(--bezel-lo); }
+  .b-f img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 3px 8px rgb(0 0 0 / .25); display: block; }
+  .b-f b { font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .b-f small { font-size: 11px; color: var(--tile-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .b-f .tagout { display: none; position: absolute; top: 28px; left: 50%; transform: translateX(-50%) rotate(-12deg); background: var(--tile-ink); color: #fff; font-family: var(--font-lcd); font-size: 18px; padding: 0 8px; border-radius: 4px; }
+  .b-f.out { opacity: .55; }
+  .b-f.out img { filter: grayscale(1); }
+  .b-f.out .tagout { display: block; }
+  .b-f.win { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--yellow), 0 0 18px rgb(255 196 50 / .8); }
+  .b-f.champ b::before { content: "★ "; color: #c98a00; }
+  .story { background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 14px 16px; min-height: 130px; font-size: 15px; line-height: 1.6; box-shadow: inset 0 -4px 0 var(--bezel-lo); }
+  .story h4 { font-family: var(--font-display); font-size: 17px; margin: 14px 0 4px; color: var(--case-lo); text-transform: uppercase; letter-spacing: .03em; }
+  .story h4:first-child { margin-top: 0; }
+  .story p { margin: 0 0 8px; max-width: 68ch; }
+  .story .wait { font-family: var(--font-lcd); font-size: 20px; color: var(--tile-dim); animation: blink 1.2s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .b-result { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; box-shadow: inset 0 0 0 3px var(--case-lo); }
+  .b-result h3 { font-family: var(--font-display); font-size: 22px; color: var(--yellow); }
+  .b-result ol { margin: 0; padding-left: 24px; font-family: var(--font-lcd); font-size: 19px; }
+  .b-result p { margin: 0; font-size: 14px; color: #fff; }
   .bctl { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
   /* ---------- phone: the selected animal opens as a sheet; scan buttons float at the bottom ---------- */
@@ -548,7 +541,7 @@
             <li>Tryk <b>SCAN</b> og vælg et billede af et dyr. AI'en finder arten.</li>
             <li>Registrér dyret, så låser det op. Silhuetterne viser, hvad du mangler.</li>
             <li>Har du mange gamle billeder? Brug <b>Importér fotoalbum</b>.</li>
-            <li>Lad dine dyr kæmpe i <b>Battle</b>, og sammenlign med venner under <b>Trænere</b>.</li>
+            <li>Sæt flere dyr op mod hinanden i <b>Battle</b>, og få kampen fortalt. Sammenlign med venner under <b>Trænere</b>.</li>
           </ol>
           <div><button class="btn sm" id="helpok">Forstået</button></div>
         </div>
@@ -838,7 +831,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
     viewCard: false, outlineJobs: new Map(),
-    me: null, viewing: null, mine: [], players: new Map(), names: new Map(), moves: new Map(), unsubOther: null, user: null, tts: null,
+    me: null, viewing: null, mine: [], players: new Map(), names: new Map(), unsubOther: null, user: null, tts: null,
   };
   const importKeys = new Set(), importSigs = new Set();
   const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
@@ -1311,9 +1304,9 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
       countOf("explorer", "🧭", "Opdagelsesrejsende", "Bonusdyr uden for kataloget.", [1, 5, 10], c => c.caught.filter(e => e.bonus).length),
     ] },
     { group: "Battle", list: [
-      countOf("win1", "🥊", "Første sejr", "Vind en kamp med et af dine dyr.", [1], c => c.player.wins || 0),
+      countOf("win1", "🥊", "Første sejr", "Din kæmper (★) vinder en kamp.", [1], c => c.player.wins || 0),
       countOf("wins", "🏆", "Kampveteran", "Sejre i alt.", [5, 25, 100], c => c.player.wins || 0),
-      countOf("giant", "🪨", "David mod Goliat", "Vind over et dyr, der er meget stærkere end dit.", [1], c => c.player.giants || 0),
+      countOf("giant", "🪨", "David mod Goliat", "Vind med en kæmper, der har meget lavere kampkraft end den stærkeste modstander.", [1], c => c.player.giants || 0),
     ] },
     { group: "Daglige missioner", list: [
       countOf("daily", "📅", "Missionær", "Dage hvor alle tre missioner blev klaret.", [1, 7, 30], c => (c.player.daily || []).length),
@@ -2040,7 +2033,6 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     $("#badges").hidden = tab !== "badges";
     $("#battle").hidden = tab !== "battle";
     $("#trainers").hidden = tab !== "trainers";
-    if (tab !== "battle") B.auto = false;
     renderBadges(); renderBattle(); renderTrainers();
   }
 
@@ -2150,48 +2142,13 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     } catch {} finally { backfilling = false; }
   }
 
-  /* ---------- battle: a local turn-based fight built from each animal's stats, types and AI-made moves ---------- */
-  const TYPE_CHART = { Vand: ["Ørken", "Mark"], Hav: ["Vand", "By"], Luft: ["Mark", "Jungle", "Skov"], Skov: ["Vand", "Bjerg"], Jungle: ["Skov", "Hav"],
-    Mark: ["Gift", "Hjem"], Bjerg: ["Luft", "Is"], Ørken: ["Is", "Hjem"], Is: ["Luft", "Jungle", "Vand"], By: ["Hjem", "Mark"], Nat: ["By", "Hjem", "Luft"],
-    Gift: ["Jungle", "Skov", "Mark", "Hjem"], Hjem: ["Nat"] };
-  const EFFECTS = ["none", "heal", "atkUp", "defUp", "poison", "stun"];
-  const EFFECT_LABEL = { none: "", heal: "Helbreder", atkUp: "Angreb op", defUp: "Forsvar op", poison: "Forgifter", stun: "Lammer" };
-  const B = { stage: "pick", side: { a: { trainer: null, key: null }, b: { trainer: null, key: null } }, rosters: new Map(), f: null, src: null, msg: "", busy: false, auto: false, speak: false, over: false, recorded: false };
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-  function effectiveness(type, defTypes) {
-    let m = 1;
-    for (const t of defTypes || []) { if (TYPE_CHART[type]?.includes(t)) m *= 1.5; else if (TYPE_CHART[t]?.includes(type)) m *= 0.67; }
-    return m;
-  }
-  function fallbackMoves(cat, types) {
-    const t = (types && types[0]) || "Mark";
-    const sets = {
-      pattedyr: [["Bid", 60, 95, "none"], ["Kloslag", 50, 100, "none"], ["Brøl", 0, 100, "atkUp"], ["Slik sårene", 0, 100, "heal"]],
-      fugl: [["Næbhug", 55, 100, "none"], ["Styrtdyk", 80, 85, "none", "Luft"], ["Vingeslag", 45, 100, "none", "Luft"], ["Pust fjerene", 0, 100, "defUp"]],
-      krybdyr: [["Bid", 65, 90, "none"], ["Halepisk", 50, 100, "none"], ["Solbad", 0, 100, "heal"], ["Skælpanser", 0, 100, "defUp"]],
-      padde: [["Tungeslag", 50, 100, "none"], ["Hop", 45, 100, "none"], ["Slim", 0, 90, "stun"], ["Kvæk", 0, 100, "atkUp"]],
-      fisk: [["Bid", 55, 95, "none"], ["Halesmæld", 50, 100, "none", "Vand"], ["Stimeangreb", 70, 85, "none", "Vand"], ["Gem dig", 0, 100, "defUp"]],
-      insekt: [["Kæbeknib", 50, 95, "none"], ["Summen", 0, 90, "stun"], ["Sværm", 65, 85, "none"], ["Panser", 0, 100, "defUp"]],
-      edderkoppedyr: [["Giftbid", 45, 95, "poison", "Gift"], ["Spind", 0, 90, "stun"], ["Kloknib", 55, 95, "none"], ["Lur", 0, 100, "atkUp"]],
-      bloeddyr: [["Slimspor", 0, 90, "stun"], ["Sug", 45, 100, "none"], ["Skal", 0, 100, "defUp"], ["Fangarme", 60, 90, "none", "Hav"]],
-      krebsdyr: [["Kloknib", 60, 95, "none"], ["Skalstød", 50, 100, "none"], ["Panser", 0, 100, "defUp"], ["Sidelæns flugt", 0, 100, "heal"]],
-    };
-    return (sets[cat] || sets.pattedyr).map(([name, power, acc, effect, type]) => ({ name, power, acc, effect, type: type || t, desc: "" }));
-  }
-  function cleanMoves(list, cat, types) {
-    const fb = fallbackMoves(cat, types);
-    if (!Array.isArray(list)) return fb;
-    const out = list.slice(0, 4).filter(m => m && m.name).map(m => ({
-      name: String(m.name).slice(0, 28), type: TYPES.includes(m.type) ? m.type : ((types && types[0]) || "Mark"),
-      power: Math.round(clamp(m.power, 0, 110)), acc: Math.round(clamp(m.acc ?? 95, 50, 100)),
-      effect: EFFECTS.includes(m.effect) ? m.effect : "none", desc: String(m.desc || "").slice(0, 80),
-    }));
-    while (out.length < 4) out.push(fb[out.length]);
-    if (!out.some(m => m.power >= 40)) out[0] = fb[0];
-    return out;
-  }
+  /* ---------- battle: pick several animals, and the fight is simulated and told as a story ---------- */
+  const ARENAS = [["tilfaeldig", "Tilfældig arena"], ["savanne", "Savannen ved solnedgang"], ["jungle", "Den tætte jungle"], ["skov", "Den danske skov"],
+    ["kyst", "Kysten, halvt vand og halvt land"], ["hav", "Det åbne hav"], ["bjerg", "De stejle bjerge"], ["is", "Isen i polarnatten"], ["oerken", "Den brændende ørken"], ["by", "Byen om natten"]];
+  const MAX_FIGHTERS = 6;
+  const B = { stage: "pick", lineup: [], champ: null, browse: null, arena: "tilfaeldig", rosters: new Map(), run: null, speak: false };
   const spName = sp => CATALOG_BY_KEY.get(sp.key)?.name || sp.info.name;
+  const uidOf = x => `${x.trainer}|${x.key}`;
 
   function rosterOf(uid) {
     if (!uid) return [];
@@ -2205,165 +2162,223 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     }, () => { B.rosters.set(uid, []); renderBattle(); });
     return null;
   }
+  const lineupSp = x => rosterOf(x.trainer)?.find(sp => sp.key === x.key) || null;
 
-  function makeFighter(sp, trainer) {
-    const i = sp.info, st = i.stats || {};
-    const v = k => clamp(st[k] ?? 5, 1, 10);
-    const pw = speciesPower(sp, trainer);
-    const level = pw.level;
-    const lv = 1 + level / 100;
-    const maxHp = Math.round((60 + v("styrke") * 7 + v("snilde") * 2) * lv);
-    return { key: sp.key, trainer, name: spName(sp), latin: CATALOG_BY_KEY.get(sp.key)?.latin || i.latin || "", cat: i.category || "andet",
-      types: i.types?.length ? i.types : ["Mark"], src: thumbSrc(sp.photos[0]), level, maxHp, hp: maxHp,
-      atk: (6 + v("styrke") * 2 + v("fart") * 0.5) * lv, def: (6 + v("snilde") * 1.4 + v("styrke") * 0.8) * lv,
-      spe: v("fart"), cute: v("nuttethed"), styrke: v("styrke"), moves: null, poison: false, stun: false, atkUp: 0, defUp: 0, kk: pw.kk, sp };
-  }
-
-  async function ensureMoves(fs) {
-    const need = [...new Map(fs.filter(f => !state.moves.has(f.key)).map(f => [f.key, f])).values()];
-    if (need.length && state.sample) {
-      const prompt = `Lav 4 kamp-angreb i Pokémon-stil til hvert af disse dyr i et battlespil med rigtige dyr.
-Angrebene skal passe til dyrets rigtige evner og adfærd (fx bid, gift, kvælertag, camouflage, brøl, spring, sprøjt) og have korte, sjove danske navne.
-${need.map(f => `- ${f.key}: ${f.name} (${f.latin || "?"}), gruppe ${f.cat}, typer ${f.types.join("/")}`).join("\n")}
-
-Hvert angreb er {"name": "1-3 ord på dansk", "type": en af ${JSON.stringify(TYPES)}, "power": 0-110 (0 for rene effekt-angreb), "acc": 60-100, "effect": en af ${JSON.stringify(EFFECTS)}, "desc": "kort dansk beskrivelse, højst 10 ord"}.
-Mindst 2 af hvert dyrs angreb skal gøre skade (power 40 eller mere). Brug kun "poison", hvis dyret faktisk er giftigt, og brug "heal" sjældent.
-Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angreb]${need[1] ? `, "${need[1].key}": [4 angreb]` : ""}}`;
-      try {
-        const r = await state.sample.json(prompt, { cache: false });
-        for (const f of need) {
-          const mv = cleanMoves(r?.[f.key], f.cat, f.types);
-          state.moves.set(f.key, mv);
-          state.db?.collection("moves").doc(f.key).set({ moves: mv, name: f.name }).catch(() => {});
-        }
-      } catch {}
-    }
-    for (const f of fs) f.moves = cleanMoves(state.moves.get(f.key), f.cat, f.types);
-  }
-
-  function sideHtml(which, label) {
-    const sd = B.side[which];
-    const roster = rosterOf(sd.trainer);
-    const ids = trainerIds();
-    return `<section class="b-side"><h3>${label}<button class="btn ghost sm" data-bact="random" data-side="${which}">Tilfældig</button></h3>
-      ${ids.length > 1 ? `<select data-bsel="${which}" aria-label="Træner">${ids.map(id => `<option value="${esc(id)}" ${id === sd.trainer ? "selected" : ""}>${esc(trainerName(id))}${id === state.me ? " (dig)" : ""}</option>`).join("")}</select>` : ""}
-      ${roster === null ? `<p class="b-empty">Henter dyr…</p>` : roster.length
-        ? `<div class="b-roster">${roster.map(sp => `<button data-bpick="${which}" data-key="${esc(sp.key)}" aria-pressed="${sd.key === sp.key}"><img src="${esc(thumbSrc(sp.photos[0]))}" alt="" loading="lazy"><span>${esc(spName(sp))}</span><span class="kkmini">KK ${speciesPower(sp, sd.trainer).kk} · LV ${speciesPower(sp, sd.trainer).level}</span></button>`).join("")}</div>`
-        : `<p class="b-empty">Ingen fangede dyr endnu.</p>`}
-    </section>`;
-  }
-
-  function hpCls(f) { const r = f.hp / f.maxHp; return r > 0.5 ? "" : r > 0.2 ? "mid" : "low"; }
-  function arenaHtml() {
-    const { a, b } = B.f;
-    const box = (f, side, k) => `<div class="ibox ${side}"><div class="nm"><b>${esc(f.name)}</b><span>Lv${f.level}</span></div>
-      <div class="who">${esc(trainerName(f.trainer))}</div>
-      <div class="hpbar"><span>HP</span><span class="bar"><i id="hp-${k}" class="${hpCls(f)}" style="width:${f.hp / f.maxHp * 100}%"></i></span></div>
-      ${side === "me" ? `<div class="num" id="num-${k}">${f.hp}/${f.maxHp}</div>` : ""}<div class="st" id="st-${k}"></div></div>`;
-    return `<div class="arena" id="arena"><span class="plat foe"></span><span class="plat me"></span>
-        <div class="spr foe${b.hp <= 0 ? " ko" : ""}" id="spr-b"><img src="${esc(b.src)}" alt="${esc(b.name)}"></div>
-        <div class="spr me${a.hp <= 0 ? " ko" : ""}" id="spr-a"><img src="${esc(a.src)}" alt="${esc(a.name)}"></div>
-        ${box(b, "foe", "b")}${box(a, "me", "a")}</div>
-      <div class="bmsg" id="bmsg" aria-live="polite">${esc(B.msg)}</div>
-      ${B.over
-        ? `<div class="bctl"><button class="btn" data-bact="rematch">Omkamp</button><button class="btn blue" data-bact="new">Ny kamp</button></div>`
-        : `${a.moves ? `<div class="bmoves">${a.moves.map((m, i) => { const ef = m.power ? effectiveness(m.type, b.types) : 1; return `<button data-bmove="${i}" ${B.busy || B.auto ? "disabled" : ""} title="${esc(m.desc)}"><b>${esc(m.name)}${ef > 1.01 ? '<em class="eff up">Effektiv</em>' : ef < 0.99 ? '<em class="eff down">Svag</em>' : ""}</b><small>${esc(m.type)} · ${m.power ? `Styrke ${m.power}` : EFFECT_LABEL[m.effect]}${m.power && m.effect !== "none" ? ` · ${EFFECT_LABEL[m.effect]}` : ""} · ${m.acc}%</small></button>`; }).join("")}</div>` : ""}
-        <div class="bctl"><label class="toggle"><input type="checkbox" id="bauto" ${B.auto ? "checked" : ""}> Auto-kamp</label>${state.tts ? `<label class="toggle"><input type="checkbox" id="bspeak" ${B.speak ? "checked" : ""}> Læs op</label>` : ""}<button class="btn ghost-dark sm" data-bact="quit">Giv op</button></div>`}`;
+  function fixChamp() {
+    if (B.champ && B.lineup.some(x => uidOf(x) === B.champ && x.trainer === state.me)) return;
+    const mine = B.lineup.find(x => x.trainer === state.me);
+    B.champ = mine ? uidOf(mine) : null;
   }
 
   function renderBattle() {
     const el = $("#battle");
     if (state.tab !== "battle") return;
-    if (B.stage !== "pick" && B.f) { el.innerHTML = arenaHtml(); patchArena(); return; }
-    if (!B.side.a.trainer) B.side.a.trainer = state.me;
-    if (!B.side.b.trainer) B.side.b.trainer = trainerIds().find(id => id !== state.me && (state.players.get(id)?.species || 0) > 0) || state.me;
-    const ra = rosterOf(B.side.a.trainer), rb = rosterOf(B.side.b.trainer);
-    const ready = !!(ra?.some(sp => sp.key === B.side.a.key) && rb?.some(sp => sp.key === B.side.b.key));
-    el.innerHTML = `<div class="b-pick">${sideHtml("a", "Din fighter")}${sideHtml("b", "Modstander")}</div>
-      <div class="b-go"><button class="btn" data-bact="start" ${ready ? "" : "disabled"}>Start kamp!</button><span style="font-size:14px">${ready ? "Klar til kamp." : "Vælg et dyr på hver side."}</span></div>
-      <p style="margin:0;font-size:13px;opacity:.9">Kampen bruger dyrenes stats, typer og sjældenhed. Jo flere billeder du har af et dyr, jo højere level. Angrebene laves af AI'en første gang et dyr kæmper.</p>`;
+    if (B.stage !== "pick" && B.run) { el.innerHTML = fightHtml(B.run); return; }
+    if (!B.browse || !trainerIds().includes(B.browse)) B.browse = state.me;
+    B.lineup = B.lineup.filter(x => rosterOf(x.trainer) === null || lineupSp(x));
+    fixChamp();
+    const ids = trainerIds();
+    const roster = rosterOf(B.browse);
+    const chips = B.lineup.map(x => {
+      const sp = lineupSp(x); if (!sp) return "";
+      const pw = speciesPower(sp, x.trainer), u = uidOf(x), mine = x.trainer === state.me;
+      return `<div class="b-chip${B.champ === u ? " champ" : ""}"><img src="${esc(thumbSrc(sp.photos[0]))}" alt="">
+        <div style="min-width:0"><b>${esc(spName(sp))}</b><small>${esc(trainerName(x.trainer))} · KK ${pw.kk} · LV ${pw.level}</small></div>
+        <span class="acts">${mine ? `<button data-bact="champ" data-uid="${esc(u)}" aria-pressed="${B.champ === u}" aria-label="Vælg som din kæmper" title="Din kæmper">★</button>` : ""}<button data-bact="remove" data-uid="${esc(u)}" aria-label="Fjern ${esc(spName(sp))}">✕</button></span></div>`;
+    }).join("");
+    const ready = B.lineup.length >= 2;
+    el.innerHTML = `<section class="b-panel"><h3>Kampens deltagere <span class="kkmini">${B.lineup.length}/${MAX_FIGHTERS}</span></h3>
+        ${B.lineup.length ? `<div class="b-lineup">${chips}</div>` : `<p class="b-empty">Vælg 2-${MAX_FIGHTERS} dyr herunder. Alle kæmper mod alle, og AI'en fortæller, hvordan det går.</p>`}
+        ${B.champ ? `<p class="b-empty">★ er din kæmper. Vinder den, tæller det som en sejr og giver XP.</p>` : ""}
+      </section>
+      <section class="b-panel"><h3>Vælg dyr <span><button class="btn ghost sm" data-bact="random">Tilføj tilfældigt</button> ${B.lineup.length ? `<button class="btn ghost sm" data-bact="clear">Ryd</button>` : ""}</span></h3>
+        ${ids.length > 1 ? `<select data-bsel="1" aria-label="Træner">${ids.map(id => `<option value="${esc(id)}" ${id === B.browse ? "selected" : ""}>${esc(trainerName(id))}${id === state.me ? " (dig)" : ""}</option>`).join("")}</select>` : ""}
+        ${roster === null ? `<p class="b-empty">Henter dyr…</p>` : roster.length
+          ? `<div class="b-roster">${roster.map(sp => `<button data-bpick="${esc(sp.key)}" aria-pressed="${B.lineup.some(x => x.trainer === B.browse && x.key === sp.key)}"><img src="${esc(thumbSrc(sp.photos[0]))}" alt="" loading="lazy"><span>${esc(spName(sp))}</span><span class="kkmini">KK ${speciesPower(sp, B.browse).kk}</span></button>`).join("")}</div>`
+          : `<p class="b-empty">Ingen fangede dyr endnu. Scan nogle dyr først.</p>`}
+      </section>
+      <div class="b-go">
+        <select id="barena" aria-label="Arena">${ARENAS.map(([id, label]) => `<option value="${id}" ${B.arena === id ? "selected" : ""}>${esc(label)}</option>`).join("")}</select>
+        <button class="btn big" data-bact="start" ${ready ? "" : "disabled"}>Start kampen!</button>
+        <span style="font-size:14px">${ready ? `${B.lineup.length} dyr er klar.` : "Vælg mindst to dyr."}</span>
+      </div>`;
   }
 
-  function patchArena() {
-    if (!B.f || !$("#arena")) return;
-    for (const [f, k] of [[B.f.a, "a"], [B.f.b, "b"]]) {
-      const bar = $("#hp-" + k); if (bar) { bar.style.width = `${f.hp / f.maxHp * 100}%`; bar.className = hpCls(f); }
-      const num = $("#num-" + k); if (num) num.textContent = `${f.hp}/${f.maxHp}`;
-      const st = $("#st-" + k); if (st) st.textContent = [f.poison && "FORGIFTET", f.stun && "LAMMET", f.atkUp && `ANGREB +${f.atkUp}`, f.defUp && `FORSVAR +${f.defUp}`].filter(Boolean).join(" · ");
-      $("#spr-" + k)?.classList.toggle("ko", f.hp <= 0);
+  function makeRun() {
+    const names = B.lineup.map(x => { const sp = lineupSp(x); return sp ? spName(sp) : ""; });
+    const fighters = B.lineup.map((x, n) => {
+      const sp = lineupSp(x); if (!sp) return null;
+      const pw = speciesPower(sp, x.trainer), i = sp.info, st = i.stats || {};
+      const dup = names.filter(nm => nm === names[n]).length > 1;
+      return { id: "ABCDEF"[n], uid: uidOf(x), trainer: x.trainer, key: sp.key, sp, name: names[n], dn: dup ? `${gen(trainerName(x.trainer))} ${names[n]}` : names[n],
+        latin: CATALOG_BY_KEY.get(sp.key)?.latin || i.latin || "", src: thumbSrc(sp.photos[0]), level: pw.level, kk: pw.kk, shiny: pw.shiny,
+        variant: sp.photos.find(ph => ph.shiny)?.variant || "", types: i.types || [], rarity: i.rarity || "almindelig",
+        stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(st[k] ?? 5, 1, 10)])), form: 1 + Math.floor(Math.random() * 10), out: false };
+    }).filter(Boolean);
+    const arenaId = B.arena === "tilfaeldig" ? ARENAS[1 + Math.floor(Math.random() * (ARENAS.length - 1))][0] : B.arena;
+    return { fighters, arena: ARENAS.find(a => a[0] === arenaId)[1], champ: B.champ, text: "", blocks: [], outs: [], winner: null, done: false, local: false, spoken: 0, ctl: null, note: "", reward: "" };
+  }
+
+  function battlePrompt(run) {
+    const n = run.fighters.length;
+    return `Du er kommentator i "Dyredex Battle": en fantasikamp mellem rigtige dyr, fortalt som en blanding af naturfilm og sportskommentator.
+Fortæl dramatisk, levende og med lidt humor på dansk, hvordan kampen går. Brug dyrenes rigtige evner, våben og adfærd (fart, kæber, kløer, gift, panser, flugt, list, flyvning, svømning).
+
+Arena: ${run.arena}.
+Deltagere:
+${run.fighters.map(f => `${f.id}: ${f.dn} (${f.latin || "?"}), træner ${trainerName(f.trainer)}. Level ${f.level}, kampkraft ${f.kk}, dagsform ${f.form}/10. Fart ${f.stats.fart}, styrke ${f.stats.styrke}, snilde ${f.stats.snilde}, nuttethed ${f.stats.nuttethed}.${f.types.length ? ` Typer: ${f.types.join("/")}.` : ""} Sjældenhed: ${f.rarity}.${f.shiny ? ` Shiny-variant${f.variant ? ` (${f.variant})` : ""}.` : ""}`).join("\n")}
+
+Regler for udfaldet:
+- Alle kæmper mod alle, og præcis ét dyr vinder.
+- Udfaldet skal være troværdigt ud fra dyrenes rigtige styrker og svagheder og arenaen (en fisk er hjælpeløs på land, en fugl kan flyve væk, et lille dyr kan gemme sig), men kampkraft, level og dagsform tæller også. Høj dagsform kan give en overraskelse, og lav dagsform kan vælte en favorit.
+- Hold det familievenligt: intet blod, og ingen dyr dør eller kommer alvorligt til skade. Tabere giver op, flygter, bliver udmattede, bliver overlistet eller besvimer.
+
+Format (følg det præcist):
+- ${n <= 2 ? "3" : n <= 4 ? "3-4" : "4-5"} korte runder. Hver runde starter med en linje "## Runde 1: <kort titel>" og har derefter 2-4 sætninger.
+- Når et dyr er ude af kampen, så skriv på en linje for sig selv lige efter afsnittet: [UDE: bogstav], fx [UDE: B]
+- Slut med linjen "## Afgørelsen", 2-3 sætninger om det sidste opgør, og til allersidst på en linje for sig selv: [VINDER: bogstav]
+- Brug dyrenes navne i teksten, aldrig bogstaverne. Ingen anden formatering, ingen lister. Højst ${150 + n * 45} ord i alt.`;
+  }
+
+  // Used when the AI is unavailable: the same kind of fight, decided by Kampkraft and form and told with stock lines.
+  function localStory(run) {
+    const alive = [...run.fighters];
+    const w = f => f.kk * (0.5 + f.form / 10);
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const move = f => { const best = STATS.map(([k]) => [k, f.stats[k]]).sort((a, b) => b[1] - a[1])[0][0];
+      return { fart: "lyner frem hurtigere, end øjet kan følge", styrke: "tromler frem med rå kraft", snilde: "lægger en snedig fælde", nuttethed: "ser så uimodståelig ud, at modstanderen glemmer at kæmpe" }[best]; };
+    const exit = ["må trække sig udmattet tilbage", "vælger klogeligt at flygte", "giver op og lunter væk", "besvimer af bar overraskelse"];
+    let out = `## Runde 1: Kampen begynder\n${alive.map(f => f.dn).join(", ").replace(/, ([^,]*)$/, " og $1")} træder ind i arenaen: ${run.arena.toLowerCase()}. Luften sitrer, og ingen vil vige først.\n\n`;
+    let round = 1;
+    while (alive.length > 1) {
+      const inv = alive.map(f => 1 / w(f)), sum = inv.reduce((a, b) => a + b, 0);
+      let r = Math.random() * sum, idx = 0;
+      while (idx < inv.length - 1 && (r -= inv[idx]) > 0) idx++;
+      const loser = alive.splice(idx, 1)[0];
+      const att = [...alive].sort((a, b) => w(b) - w(a))[Math.random() < 0.7 ? 0 : Math.floor(Math.random() * alive.length)];
+      round++;
+      if (alive.length > 1) out += `## Runde ${round}: ${pick(["Presset stiger", "Et uventet angreb", "Kaos i arenaen", "Ingen vej tilbage"])}\n${att.dn} ${move(att)}! ${loser.dn} kæmper imod, men ${pick(exit)}.\n[UDE: ${loser.id}]\n\n`;
+      else out += `## Afgørelsen\nKun to er tilbage. ${att.dn} ${move(att)}, og ${loser.dn} ${pick(exit)}. ${att.dn} står alene tilbage som kampens vinder!\n[UDE: ${loser.id}]\n[VINDER: ${att.id}]`;
     }
-    for (const btn of document.querySelectorAll("[data-bmove]")) btn.disabled = B.busy || B.auto || B.over;
+    return out;
   }
 
-  async function say(text) {
-    B.msg = text;
-    const el = $("#bmsg"); if (el) el.textContent = text;
-    if (B.speak && state.tts) { try { (state.tts.add ? state.tts.add([{ text }]) : state.tts.speak(text)).catch(() => {}); } catch {} }
-    await sleep(B.auto ? 650 : 1050);
-  }
-  async function anim(x, y) {
-    if (reducedMotion()) return;
-    const xs = $(x === B.f?.a ? "#spr-a" : "#spr-b"), ys = $(y === B.f?.a ? "#spr-a" : "#spr-b");
-    xs?.classList.add("lunge"); await sleep(220); xs?.classList.remove("lunge");
-    ys?.classList.add("hit"); await sleep(380); ys?.classList.remove("hit");
-  }
-
-  function chooseMove(x, y) {
-    const scored = x.moves.map(m => {
-      let sc = m.power ? m.power * (m.acc / 100) * effectiveness(m.type, y.types) * (x.types.includes(m.type) ? 1.15 : 1) : 0;
-      if (m.effect === "heal") sc = x.hp < x.maxHp * 0.4 ? 130 : 4;
-      else if (m.effect === "atkUp" && !m.power) sc = x.atkUp < 2 && x.hp > x.maxHp * 0.6 ? 45 : 4;
-      else if (m.effect === "defUp" && !m.power) sc = x.defUp < 2 && x.hp > x.maxHp * 0.5 ? 40 : 4;
-      else if (m.effect === "poison" && !m.power) sc = y.poison ? 2 : 55;
-      else if (m.effect === "stun" && !m.power) sc = y.stun ? 2 : 40;
-      return { m, sc: sc * (0.7 + Math.random() * 0.6) };
-    });
-    return scored.sort((p, q) => q.sc - p.sc)[0].m;
-  }
-
-  async function act(x, y, m) {
-    if (x.stun) { x.stun = false; patchArena(); if (Math.random() < 0.5) { await say(`${x.name} er lammet og kan ikke bevæge sig!`); return; } }
-    if (Math.random() < y.cute * 0.018) { await say(`${y.name} ser så nuttet ud, at ${x.name} tøver!`); return; }
-    await say(`${x.name} brugte ${m.name}!`);
-    if (Math.random() * 100 > m.acc) { await say(`${x.name} ramte ved siden af!`); return; }
-    if (m.power > 0) {
-      const eff = effectiveness(m.type, y.types);
-      const crit = Math.random() < 0.06 ? 1.5 : 1;
-      const stab = x.types.includes(m.type) ? 1.15 : 1;
-      const atk = x.atk * (1 + 0.25 * x.atkUp), def = y.def * (1 + 0.25 * y.defUp);
-      const dmg = Math.max(1, Math.round(m.power / 50 * atk * 10 / (10 + def) * 2.2 * stab * eff * crit * (0.85 + Math.random() * 0.15)));
-      await anim(x, y);
-      y.hp = Math.max(0, y.hp - dmg); patchArena();
-      if (crit > 1) await say("Fuldtræffer!");
-      if (eff > 1.01) await say("Det er meget effektivt!"); else if (eff < 0.99) await say("Det er ikke særlig effektivt …");
+  function parseStory(text, ids) {
+    const outs = []; let winner = null;
+    const clean = String(text || "").replace(/\[\s*(UDE|VINDER)\s*:\s*([A-F])\s*\]/gi, (m, t, id) => {
+      id = id.toUpperCase();
+      if (ids.includes(id)) { if (t.toUpperCase() === "UDE") { if (!outs.includes(id)) outs.push(id); } else winner = id; }
+      return "";
+    }).replace(/\[[^\]\n]*$/, "");
+    const blocks = []; let cur = null;
+    for (const raw of clean.split("\n")) {
+      const line = raw.replace(/\*\*/g, "").trim();
+      if (!line) { cur = null; continue; }
+      if (line.startsWith("#")) { blocks.push({ h: true, t: line.replace(/^#+\s*/, "") }); cur = null; }
+      else if (cur) cur.t += " " + line;
+      else blocks.push(cur = { h: false, t: line });
     }
-    if (m.effect === "heal") { const h = Math.min(x.maxHp - x.hp, Math.round(x.maxHp * 0.25)); x.hp += h; patchArena(); await say(`${x.name} fik ${h} HP tilbage.`); }
-    else if (m.effect === "atkUp") { if (x.atkUp < 2) { x.atkUp++; patchArena(); await say(`${gen(x.name)} angreb steg!`); } }
-    else if (m.effect === "defUp") { if (x.defUp < 2) { x.defUp++; patchArena(); await say(`${gen(x.name)} forsvar steg!`); } }
-    else if (m.effect === "poison" && y.hp > 0 && !y.poison) { y.poison = true; patchArena(); await say(`${y.name} blev forgiftet!`); }
-    else if (m.effect === "stun" && y.hp > 0 && !y.stun && Math.random() < 0.6) { y.stun = true; patchArena(); await say(`${y.name} er lammet!`); }
+    return { blocks, outs: outs.filter(id => id !== winner), winner };
+  }
+  const storyHtml = (run) => run.blocks.map(b => b.h ? `<h4>${esc(b.t)}</h4>` : `<p>${esc(b.t)}</p>`).join("") + (run.done ? "" : `<p class="wait">${run.blocks.length ? "…" : "KAMPEN GÅR I GANG…"}</p>`);
+  const fighterCls = (run, f) => `b-f${f.out ? " out" : ""}${run.winner === f.id && run.done ? " win" : ""}${run.champ === f.uid ? " champ" : ""}`;
+
+  function fightHtml(run) {
+    const placing = run.done && run.winner ? [run.fighters.find(f => f.id === run.winner), ...[...run.outs].reverse().map(id => run.fighters.find(f => f.id === id))].filter(Boolean) : [];
+    const win = placing[0];
+    return `<div class="b-fighters">${run.fighters.map(f => `<div class="${fighterCls(run, f)}" id="bf-${f.id}"><img src="${esc(f.src)}" alt=""><span class="tagout">UDE</span><b>${esc(f.name)}</b><small>${esc(trainerName(f.trainer))}</small><small class="kkmini">KK ${f.kk} · LV ${f.level}</small></div>`).join("")}</div>
+      <div style="font-size:14px">Arena: <b>${esc(run.arena)}</b>${run.note ? ` · ${esc(run.note)}` : ""}</div>
+      <article class="story" id="bstory" aria-live="polite">${storyHtml(run)}</article>
+      ${run.done ? `<div class="b-result">
+          ${win ? `<h3>🏆 ${esc(win.dn)} vinder!</h3><ol>${placing.map(f => `<li>${esc(f.dn)} (${esc(trainerName(f.trainer))})</li>`).join("")}</ol>` : `<h3>Kampen endte uafgjort</h3>`}
+          ${run.reward ? `<p>${esc(run.reward)}</p>` : ""}
+          <div class="bctl"><button class="btn" data-bact="rematch">Omkamp</button><button class="btn blue" data-bact="new">Ny kamp</button><button class="btn ghost-dark sm" data-bact="copy">Kopiér historien</button>${state.tts ? `<button class="btn ghost-dark sm" data-bact="read">Læs op</button>` : ""}</div>
+        </div>`
+        : `<div class="bctl">${state.tts ? `<label class="toggle"><input type="checkbox" id="bspeak" ${B.speak ? "checked" : ""}> Læs op undervejs</label>` : ""}<button class="btn ghost-dark sm" data-bact="stop">Stop kampen</button></div>`}`;
   }
 
-  async function faint(loser, winner) {
-    B.over = true; patchArena();
-    await say(`${loser.name} besvimede!`);
-    await say(`${winner.name} vinder kampen!`);
-    if (B.f && B.f.a.trainer === state.me && !B.recorded) {
-      B.recorded = true;
-      const a = B.f.a, won = winner === a;
-      const before = speciesPower(a.sp, state.me).level;
-      recordBattle(won, won && B.f.b.styrke - a.styrke >= 4, a.key);
-      if (won) {
-        await say(`${a.name} fik 60 XP!`);
-        const after = speciesPower(a.sp, state.me).level;
-        if (after > before) await say(`${a.name} steg til level ${after}!`);
-      }
+  function speakBlocks(run, upTo) {
+    if (!state.tts) return;
+    const lines = run.blocks.slice(run.spoken, upTo).map(b => ({ text: b.t.slice(0, 1900) }));
+    run.spoken = Math.max(run.spoken, upTo);
+    if (!lines.length) return;
+    try { (state.tts.add ? state.tts.add(lines) : state.tts.speak(lines.map(l => l.text).join(" ").slice(0, 1900))).catch(() => {}); } catch {}
+  }
+
+  // Called for every streamed chunk: updates the story and who is still standing without redrawing the whole view.
+  function applyStory(run, text) {
+    if (B.run !== run) return;
+    run.text = text;
+    const ps = parseStory(text, run.fighters.map(f => f.id));
+    Object.assign(run, { blocks: ps.blocks, outs: ps.outs, winner: ps.winner });
+    for (const f of run.fighters) f.out = ps.outs.includes(f.id);
+    const st = $("#bstory");
+    if (st) st.innerHTML = storyHtml(run);
+    for (const f of run.fighters) { const el = $("#bf-" + f.id); if (el) el.className = fighterCls(run, f); }
+    if (B.speak) speakBlocks(run, Math.max(0, run.blocks.length - 1));
+  }
+
+  function finishFight(run, text) {
+    if (B.run !== run) return;
+    applyStory(run, text);
+    const left = run.fighters.filter(f => !f.out);
+    if (!run.winner && left.length === 1) run.winner = left[0].id;
+    if (run.winner) { run.outs = run.outs.filter(id => id !== run.winner); for (const f of run.fighters) if (f.id !== run.winner && !run.outs.includes(f.id)) run.outs.unshift(f.id); for (const f of run.fighters) f.out = f.id !== run.winner; }
+    run.done = true; B.stage = "done";
+    if (B.speak) speakBlocks(run, run.blocks.length);
+    const champ = run.fighters.find(f => f.uid === run.champ);
+    if (champ && run.winner) {
+      const won = champ.id === run.winner;
+      const before = speciesPower(champ.sp, state.me).level;
+      const strongest = Math.max(...run.fighters.filter(f => f !== champ).map(f => f.kk));
+      recordBattle(won, won && champ.kk < strongest * 0.7, champ.key);
+      const after = speciesPower(champ.sp, state.me).level;
+      const place = 2 + [...run.outs].reverse().indexOf(champ.id);
+      run.reward = won ? `★ Din kæmper ${champ.name} vandt og fik 60 XP!${after > before ? ` Den steg til level ${after}!` : ""}` : `★ Din kæmper ${champ.name} blev nummer ${place} af ${run.fighters.length}.`;
     }
-    B.busy = false;
     renderBattle();
   }
 
-  async function recordBattle(won, giant, key) {
+  async function startBattle() {
+    if (B.lineup.length < 2) return;
+    try { state.tts?.stop?.(); } catch {}
+    const run = makeRun();
+    if (run.fighters.length < 2) return;
+    B.run = run; B.stage = "fight";
+    renderBattle();
+    $("#battle").scrollIntoView({ block: "nearest" });
+    let text = null;
+    if (state.sample) {
+      run.ctl = new AbortController();
+      try {
+        const r = await state.sample(battlePrompt(run), { cache: false, signal: run.ctl.signal, onText: ({ text: t }) => applyStory(run, t) });
+        text = r.text;
+      } catch (e) {
+        if (B.run !== run) return;
+        if (e?.code === "cancelled") { B.stage = "pick"; B.run = null; renderBattle(); return; }
+        run.note = e?.code === "rate_limited" ? "AI'en har travlt, så denne kamp er simuleret uden AI" : "AI'en svarede ikke, så denne kamp er simuleret uden AI";
+      }
+    } else run.note = "simuleret uden AI";
+    if (B.run !== run) return;
+    if (text === null) {
+      // Reveal the local story a block at a time, so it still feels like a live commentary.
+      run.local = true;
+      Object.assign(run, { text: "", blocks: [], outs: [], winner: null }); for (const f of run.fighters) f.out = false;
+      renderBattle();
+      const parts = localStory(run).split("\n\n");
+      let acc = "";
+      for (const part of parts) {
+        await new Promise(res => setTimeout(res, reducedMotion() ? 0 : 1100));
+        if (B.run !== run) return;
+        acc += (acc ? "\n\n" : "") + part;
+        applyStory(run, acc);
+      }
+      text = acc;
+    }
+    finishFight(run, text);
+  }
+
+  function recordBattle(won, giant, key) {
     const p = state.players.get(state.me) || {};
     const day = today();
     const upd = won
@@ -2372,59 +2387,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
       : { losses: (p.losses || 0) + 1 };
     state.players.set(state.me, { ...p, ...upd });
     if (state.db && !state.memory) state.db.collection("players").doc(state.me).update(upd).catch(() => {});
-    if (isMine()) { const ach = allAch(); renderBadges(ach); checkBadges(ach); renderMissions(); }
-  }
-
-  async function playerMove(idx) {
-    const run = B.f;
-    if (!run || B.busy || B.over) return;
-    B.busy = true; patchArena();
-    const { a, b } = run;
-    const ma = a.moves[idx], mb = chooseMove(b, a);
-    const aFirst = a.spe + Math.random() * 2 >= b.spe + Math.random() * 2;
-    const order = aFirst ? [[a, b, ma], [b, a, mb]] : [[b, a, mb], [a, b, ma]];
-    for (const [x, y, m] of order) {
-      if (x.hp <= 0 || y.hp <= 0) break;
-      await act(x, y, m);
-      if (B.f !== run) return;
-      if (y.hp <= 0) { await faint(y, x); return; }
-    }
-    for (const x of [a, b]) {
-      if (!x.poison || x.hp <= 0) continue;
-      const d = Math.max(1, Math.round(x.maxHp * 0.07));
-      x.hp = Math.max(0, x.hp - d); patchArena();
-      await say(`${x.name} tager skade af giften.`);
-      if (B.f !== run) return;
-      if (x.hp <= 0) { await faint(x, x === a ? b : a); return; }
-    }
-    B.busy = false; patchArena();
-    if (B.auto) setTimeout(autoTurn, 350);
-  }
-  function autoTurn() {
-    if (!B.auto || B.over || B.busy || !B.f || state.tab !== "battle") return;
-    playerMove(B.f.a.moves.indexOf(chooseMove(B.f.a, B.f.b)));
-  }
-
-  async function startBattle(rematch) {
-    if (!rematch) {
-      const ra = rosterOf(B.side.a.trainer)?.find(sp => sp.key === B.side.a.key);
-      const rb = rosterOf(B.side.b.trainer)?.find(sp => sp.key === B.side.b.key);
-      if (!ra || !rb) return;
-      B.src = { ra, rb, ta: B.side.a.trainer, tb: B.side.b.trainer };
-    }
-    if (!B.src) return;
-    const a = makeFighter(B.src.ra, B.src.ta), b = makeFighter(B.src.rb, B.src.tb);
-    const run = { a, b };
-    Object.assign(B, { stage: "fight", f: run, over: false, busy: true, recorded: false, msg: "Forbereder angrebene…" });
-    renderBattle();
-    await ensureMoves([a, b]);
-    if (B.f !== run) return;
-    B.msg = ""; renderBattle();
-    await say(b.trainer === state.me ? `En vild ${b.name} dukker op!` : `${trainerName(b.trainer)} sender ${b.name} i kamp!`);
-    await say(`Kom så, ${a.name}!`);
-    if (B.f !== run) return;
-    B.busy = false; patchArena();
-    if (B.auto) autoTurn();
+    if (isMine()) { const ach = allAch(); renderBadges(ach); checkBadges(ach); renderMissions(); renderDex(); renderViewer(); }
   }
 
   /* ---------- unlock moments: one overlay at a time ---------- */
@@ -2523,20 +2486,37 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
   $("#trainers").addEventListener("keydown", e => { if (e.target.id === "nick" && e.key === "Enter") saveNick(); });
   $("#battle").addEventListener("click", e => {
     const pk = e.target.closest("[data-bpick]");
-    if (pk) { B.side[pk.dataset.bpick].key = pk.dataset.key; renderBattle(); return; }
-    const mv = e.target.closest("[data-bmove]");
-    if (mv) { playerMove(Number(mv.dataset.bmove)); return; }
+    if (pk) {
+      const at = B.lineup.findIndex(x => x.trainer === B.browse && x.key === pk.dataset.bpick);
+      if (at >= 0) B.lineup.splice(at, 1);
+      else if (B.lineup.length >= MAX_FIGHTERS) { toast(`Højst ${MAX_FIGHTERS} dyr i en kamp`); return; }
+      else B.lineup.push({ trainer: B.browse, key: pk.dataset.bpick });
+      renderBattle(); return;
+    }
     const ab = e.target.closest("[data-bact]"); if (!ab) return;
     const act = ab.dataset.bact;
-    if (act === "random") { const sd = B.side[ab.dataset.side]; const r = rosterOf(sd.trainer); if (r?.length) sd.key = r[Math.floor(Math.random() * r.length)].key; renderBattle(); }
-    else if (act === "start") startBattle(false);
-    else if (act === "rematch") startBattle(true);
-    else if (act === "new" || act === "quit") { B.stage = "pick"; B.f = null; B.over = false; try { state.tts?.stop?.(); } catch {} renderBattle(); }
+    if (act === "remove") { B.lineup = B.lineup.filter(x => uidOf(x) !== ab.dataset.uid); renderBattle(); }
+    else if (act === "champ") { B.champ = ab.dataset.uid; renderBattle(); }
+    else if (act === "clear") { B.lineup = []; renderBattle(); }
+    else if (act === "random") {
+      if (B.lineup.length >= MAX_FIGHTERS) { toast(`Højst ${MAX_FIGHTERS} dyr i en kamp`); return; }
+      const pool = trainerIds().flatMap(id => (rosterOf(id) || []).map(sp => ({ trainer: id, key: sp.key }))).filter(x => !B.lineup.some(y => uidOf(y) === uidOf(x)));
+      if (!pool.length) { toast("Der er ikke flere dyr at vælge"); return; }
+      B.lineup.push(pool[Math.floor(Math.random() * pool.length)]); renderBattle();
+    }
+    else if (act === "start" || act === "rematch") startBattle();
+    else if (act === "stop") { const run = B.run; if (run?.ctl && !run.local) run.ctl.abort(); else { B.run = null; B.stage = "pick"; renderBattle(); } try { state.tts?.stop?.(); } catch {} }
+    else if (act === "new") { B.run = null; B.stage = "pick"; try { state.tts?.stop?.(); } catch {} renderBattle(); }
+    else if (act === "read" && B.run) { B.run.spoken = 0; try { state.tts?.stop?.(); } catch {} speakBlocks(B.run, B.run.blocks.length); }
+    else if (act === "copy" && B.run) {
+      const txt = B.run.blocks.map(b => b.h ? `\n${b.t.toUpperCase()}` : b.t).join("\n").trim();
+      navigator.clipboard.writeText(txt).then(() => toast("Historien er kopieret"), () => toast("Kunne ikke kopiere. Markér teksten og kopiér selv."));
+    }
   });
   $("#battle").addEventListener("change", e => {
-    if (e.target.matches("[data-bsel]")) { const sd = B.side[e.target.dataset.bsel]; sd.trainer = e.target.value; sd.key = null; renderBattle(); }
-    if (e.target.id === "bauto") { B.auto = e.target.checked; patchArena(); if (B.auto) autoTurn(); }
-    if (e.target.id === "bspeak") B.speak = e.target.checked;
+    if (e.target.matches("[data-bsel]")) { B.browse = e.target.value; renderBattle(); }
+    if (e.target.id === "barena") B.arena = e.target.value;
+    if (e.target.id === "bspeak") { B.speak = e.target.checked; if (B.speak && B.run) B.run.spoken = Math.max(0, B.run.blocks.length - 1); }
   });
   document.addEventListener("paste", e => {
     const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
@@ -2665,7 +2645,6 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
         if (B.stage === "pick") renderBattle();
         if (isMine() && state.loaded) { const ach = allAch(); renderBadges(ach); checkBadges(ach); }
       }, () => {});
-      db.collection("moves").onSnapshot(snap => { for (const d of snap.docs) state.moves.set(d.id, d.data().moves); }, () => {});
       let first = true;
       db.collection(sightPath(me)).orderBy("createdAt", "asc").onSnapshot(snap => {
         state.mine = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.key && x.name);

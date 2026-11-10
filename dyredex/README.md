@@ -19,7 +19,7 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 - **Kun ægte dyr:** AI'en tjekker først, om det er et ægte dyr. Statuer, figurer, legetøj, tegninger, udstoppede dyr og dyr på skærme eller skilte kan ikke registreres (album-importen springer dem over). Tager AI'en fejl, kan du trykke "Det er et ægte dyr".
 - **Holo-kort:** Tryk "HOLO-KORT" på et fanget dyr for at se dit foto som et samlekort med navn, nummer, typer, stats og regnbue-glimmer. Glimmeret er stærkere jo sjældnere dyret er. Kortet vipper, når du trækker over det, og ellers svajer det lidt af sig selv. AI'en tegner dyrets omrids (det kommer med ved nye scanninger, og ældre billeder får det med "Lad dyret poppe ud"), så dyret ligger på et lag foran baggrunden og popper ud, når kortet vipper. Hvis siden får lov til at læse telefonens bevægelsessensor, kan du også vippe telefonen.
 - **Flere trænere:** Hver person har sin egen Dyredex under `players/<id>/`. Fanen "Trænere" viser en rangliste med arter, billeder, badges og sejre, og du kan kigge i de andres samlinger (kun læse). Venner inviteres ved at dele siden med deres e-mail som Editor; de skal kunne uploade billeder. Ejerens gamle samling flyttes automatisk ind under ejerens egen trænerprofil første gang den nye version åbnes.
-- **Battle:** Vælg et dyr fra din samling og en modstander fra din egen eller en vens samling. Kampen er turbaseret i Pokémon-stil og regnes ud lokalt ud fra dyrenes stats (fart, styrke, snilde, nuttethed), typer, sjældenhed og level (flere billeder af samme art giver højere level). AI'en laver fire angreb pr. art første gang den kæmper, og de gemmes i `moves`. Der er typefordele, fuldtræffere, gift, lammelse, helbredelse og stat-boost, og en auto-kamp. Sejre tæller med i badges (Første sejr, Kampveteran, David mod Goliat).
+- **Battle:** Vælg 2-6 dyr fra din egen og dine venners samlinger og en arena (savanne, jungle, hav, is …). Alle kæmper mod alle, og AI'en fortæller kampen dramatisk runde for runde, mens teksten skrives ud og taberne markeres "UDE". Udfaldet bygger på dyrenes rigtige evner, arenaen, deres stats, level og kampkraft samt en tilfældig "dagsform", så en omkamp kan ende anderledes. Du udpeger en af dine egne som din kæmper (★): vinder den, tæller det som en sejr, giver 60 XP og tæller med i badges og missioner. Historien kan kopieres og læses op. Uden AI simuleres kampen lokalt ud fra kampkraft.
 - **Oplæsning:** Hvor Claude kan læse op, kan dyrets tekst og kampens forløb læses højt.
 - **Hurtigere:** Gitteret viser små miniaturer (360 px), som laves ved upload. Ældre billeder får dem i baggrunden. På telefonen åbner det valgte dyr som et ark, og SCAN og Fotoalbum ligger altid i bunden.
 - **Sted og tid:** GPS-position og optagelsestidspunkt læses fra billedets EXIF-data (JPEG og WebP), før billedet gøres mindre. De sendes med til AI'en som hjælp til at bestemme arten, og stedet får et navn. Mangler billedet GPS, kan du skrive stedet selv.
@@ -31,9 +31,9 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 
 | Funktion | Bruges til |
 | --- | --- |
-| `sample` (med billeder) | AI-genkendelse og den grundige artsbestemmelse |
+| `sample` (med billeder) | AI-genkendelse, den grundige artsbestemmelse og kampfortællingen |
 | `assets` | Gemmer billederne |
-| `db` | Trænere (`players`), hver træners fund (`players/<id>/sightings`) og kampangreb (`moves`) |
+| `db` | Trænere (`players`) og hver træners fund (`players/<id>/sightings`) |
 | `user` | Hvem der kigger, så hver træner får sin egen samling og sit navn på ranglisten |
 | `tts` | Oplæsning af dyretekster og kampe |
 
