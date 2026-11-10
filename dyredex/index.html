@@ -213,8 +213,22 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .cat { display: inline-block; background: var(--c, #555); color: #fff; border-radius: 5px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; }
   .type { border: 1px solid var(--lcd-dim); border-radius: 5px; font-size: 12px; padding: 1px 7px; color: var(--lcd-dim); }
-  .rar { color: var(--case); letter-spacing: 1px; font-size: 13px; }
+  .rar { color: var(--rc, var(--case)); letter-spacing: 1px; font-size: 13px; white-space: nowrap; }
   .rar .off { color: var(--lcd-2); }
+  .rar b { font-family: var(--font-lcd); font-weight: 400; font-size: 16px; letter-spacing: .03em; margin-left: 3px; }
+  .iucn { border-radius: 5px; font-size: 11px; font-weight: 700; padding: 2px 7px; color: #fff; background: var(--ic, #666); white-space: nowrap; }
+  .shinyline { margin: 0; font-weight: 700; color: #b0179b; font-size: 14px; }
+  .statpanel { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+  @media (max-width: 360px) { .statpanel { grid-template-columns: minmax(0, 1fr); } }
+  .radar { width: 100%; height: auto; display: block; }
+  .radar text { font-family: var(--font-lcd); font-size: 13px; fill: var(--lcd-ink); }
+  .power { display: grid; gap: 4px; min-width: 0; }
+  .power .kk { font-family: var(--font-lcd); font-size: 42px; line-height: .9; }
+  .power .kk small { font-size: 18px; color: var(--lcd-dim); margin-left: 4px; }
+  .power .lv { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-lcd); font-size: 18px; }
+  .xpbar { height: 8px; background: var(--lcd-2); border-radius: 4px; overflow: hidden; }
+  .xpbar i { display: block; height: 100%; background: var(--key); }
+  .power .spec { font-size: 13px; color: var(--lcd-dim); }
   .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; margin: 0; font-size: 14px; }
   .facts dt { font-family: var(--font-lcd); font-size: 18px; color: var(--lcd-dim); line-height: 1.2; }
   .facts dd { margin: 0; }
@@ -325,7 +339,33 @@
   .tile.sel { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--yellow); }
   .tile .no { font-family: var(--font-lcd); font-size: 17px; line-height: 1; text-align: left; color: var(--tile-dim); }
   .tile.caught .no { color: var(--tile-ink); }
-  .tile .art { display: grid; place-items: center; min-height: 0; overflow: hidden; border-radius: 7px; }
+  .tile .art { display: grid; place-items: center; min-height: 0; overflow: hidden; border-radius: 7px; position: relative; }
+  .tile .kkb { position: absolute; left: 3px; bottom: 3px; font-family: var(--font-lcd); font-size: 14px; line-height: 1; background: rgb(10 14 18 / .72); color: #fff; padding: 1px 4px; border-radius: 4px; }
+  .tile .shn { position: absolute; right: 3px; bottom: 2px; font-size: 15px; font-family: var(--font-emoji); text-shadow: 0 0 4px #fff; }
+  .tile.caught { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 2px var(--rc, transparent); }
+  .tile.caught.r-3 { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 2px var(--rc), 0 0 14px rgb(139 63 201 / .6); }
+  .tile.caught.r-4 { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--rc), 0 0 18px rgb(255 196 50 / .75); }
+  .tile.caught.r-4::after, .tile.caught.shiny::after {
+    content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none; mix-blend-mode: screen;
+    background: linear-gradient(115deg, transparent 35%, rgb(255 236 160 / .6) 48%, transparent 60%); background-size: 260% 100%; animation: shimmer 3.2s linear infinite;
+  }
+  .tile.caught.shiny::after { background-image: linear-gradient(115deg, transparent 30%, rgb(255 140 230 / .5) 42%, rgb(140 220 255 / .5) 52%, transparent 64%); }
+  .tile.caught.sel, .tile.sel { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--yellow); }
+  @keyframes shimmer { from { background-position: 160% 0; } to { background-position: -160% 0; } }
+  .missions { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 0 0 3px var(--case-lo); display: grid; gap: 6px; font-family: var(--font-lcd); font-size: 19px; }
+  .missions .mh { display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+  .missions ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .missions li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+  .missions li.done { color: #fff; }
+  .missions li.done .t { text-decoration: line-through; opacity: .7; }
+  .missions .all { color: var(--yellow); }
+  .tools select { padding: 7px 10px; border-radius: 7px; border: 0; background: var(--tile); color: var(--tile-ink); }
+  .eff { font-style: normal; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 4px; margin-left: 4px; color: #fff; }
+  .eff.up { background: #2f9e55; } .eff.down { background: #8d8d8d; }
+  .kkmini { font-family: var(--font-lcd); font-size: 13px; color: var(--tile-dim); }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .confetti i { position: absolute; top: -14px; left: var(--x); width: 8px; height: 13px; background: var(--c); border-radius: 2px; opacity: 0; animation: fall 2.6s var(--d) cubic-bezier(.3, .6, .5, 1) forwards; }
+  @keyframes fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(105vh) rotate(760deg); } }
   .tile .art .sil { font-size: clamp(34px, 7vw, 46px); }
   .tile .art img { width: 100%; height: 100%; object-fit: cover; display: block; max-width: 100%; }
   .tile .nm { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -345,10 +385,10 @@
   .unlock .u {
     width: min(340px, 100%); background: var(--lcd); color: var(--lcd-ink); border-radius: 16px; overflow: hidden; text-align: center;
     max-height: calc(100dvh - 40px); overflow-y: auto;
-    border: 6px solid var(--case); animation: pop .55s cubic-bezier(.2, 1.4, .4, 1) both;
+    border: 6px solid var(--uc, var(--case)); animation: pop .55s cubic-bezier(.2, 1.4, .4, 1) both;
   }
   @keyframes pop { from { transform: scale(.6) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
-  .unlock .lbl { background: var(--case); color: #fff; font-family: var(--font-lcd); font-size: 24px; padding: 4px; }
+  .unlock .lbl { background: var(--uc, var(--case)); color: #fff; font-family: var(--font-lcd); font-size: 24px; padding: 4px; }
   .unlock img { width: 100%; height: min(320px, 42vh); object-fit: cover; display: block; max-width: 100%; background: var(--lcd-2); }
   .unlock .ub { padding: 12px; display: grid; gap: 6px; justify-items: center; }
   .unlock h3 { font-family: var(--font-display); font-size: 26px; }
@@ -523,6 +563,7 @@
         <div class="battle" id="battle" hidden></div>
         <div class="trainers-view" id="trainers" hidden style="display:grid;gap:10px"></div>
         <div id="view-dex" style="display:grid;gap:14px">
+        <div class="missions" id="missions" hidden></div>
         <div class="keys" id="keys" role="group" aria-label="Vælg region"></div>
         <div class="stripbar" id="strip"></div>
         <div class="tools">
@@ -532,6 +573,7 @@
             <button data-show="mangler" aria-pressed="false">Mangler</button>
           </div>
           <div class="search"><input id="q" type="search" placeholder="Søg navn eller latin…" aria-label="Søg"></div>
+          <select id="sort" aria-label="Sortér"><option value="nr">Nummer</option><option value="kk">Kampkraft</option><option value="rarity">Sjældenhed</option><option value="lv">Level</option><option value="recent">Nyeste</option></select>
           <label class="toggle"><input type="checkbox" id="shownames"> Vis navne</label>
         </div>
         <div class="dex" id="dex"></div>
@@ -567,8 +609,11 @@
   const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
   const CODE = { m: "pattedyr", b: "fugl", r: "krybdyr", a: "padde", f: "fisk", i: "insekt", s: "edderkoppedyr", l: "bloeddyr", c: "krebsdyr", o: "andet" };
   const TYPES = ["Skov", "Mark", "Vand", "Hav", "Luft", "Bjerg", "Ørken", "Is", "Jungle", "By", "Nat", "Gift", "Hjem"];
-  const RARITY = ["almindelig", "usædvanlig", "sjælden", "legendarisk"];
-  const RARITY_LABEL = { almindelig: "Almindelig", "usædvanlig": "Usædvanlig", "sjælden": "Sjælden", legendarisk: "Legendarisk" };
+  const RARITY = ["almindelig", "usædvanlig", "sjælden", "episk", "legendarisk"];
+  const RARITY_LABEL = { almindelig: "Almindelig", "usædvanlig": "Usædvanlig", "sjælden": "Sjælden", episk: "Episk", legendarisk: "Legendarisk" };
+  const RARITY_COLOR = { almindelig: "#8a8f98", "usædvanlig": "#2f9e55", "sjælden": "#2a6cc0", episk: "#8b3fc9", legendarisk: "#d99a00" };
+  const rIdx = r => Math.max(0, RARITY.indexOf(r));
+  const IUCN = { LC: ["Ikke truet", "#2f9e55"], NT: ["Næsten truet", "#7aa834"], VU: ["Sårbar", "#d0a000"], EN: ["Truet", "#e06a1a"], CR: ["Kritisk truet", "#c4142f"], EW: ["Uddød i naturen", "#4a2a6a"], DD: ["Ukendt bestand", "#777"] };
   const STATS = [["fart", "Fart"], ["styrke", "Styrke"], ["snilde", "Snilde"], ["nuttethed", "Nuttethed"]];
   const LEVELS = ["race", "underart", "art", "slægt", "familie"];
 
@@ -786,7 +831,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   /* ---------- state ---------- */
   const state = {
-    sightings: [], queue: [], region: "alle", show: "alle", q: "",
+    sightings: [], queue: [], region: "alle", show: "alle", q: "", sort: "nr",
     showNames: store.get("dyredex-names") === "1",
     revealed: new Set((store.get("dyredex-revealed") || "").split(",").filter(Boolean)),
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
@@ -845,19 +890,60 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   function visibleEntries() {
     const q = state.q.trim().toLowerCase();
-    return DEX.filter(e =>
+    const list = DEX.filter(e =>
       (state.region === "alle" || e.region === state.region) &&
       (state.show === "alle" || (state.show === "fanget" ? !!e.sp : !e.sp)) &&
       (!q || [e.name, e.latin].some(v => String(v || "").toLowerCase().includes(q))));
+    if (state.sort === "nr") return list;
+    const val = e => {
+      if (!e.sp) return -1;
+      if (state.sort === "rarity") return rIdx(e.sp.info.rarity) * 10 + (e.sp.photos.some(p => p.shiny) ? 5 : 0);
+      if (state.sort === "recent") return Math.max(...e.sp.photos.map(p => p.createdAt || 0));
+      const pw = speciesPower(e.sp, state.viewing);
+      return state.sort === "lv" ? pw.level * 10000 + pw.kk : pw.kk;
+    };
+    return list.map(e => [e, val(e)]).sort((a, b) => b[1] - a[1] || a[0].no - b[0].no).map(x => x[0]);
   }
 
   /* ---------- rendering ---------- */
   const catHtml = id => { const c = CAT[id] || CAT.andet; return `<span class="cat" style="--c:${c.c}">${esc(c.label)}</span>`; };
-  const rarityHtml = r => {
+  const rarityHtml = (r, withLabel) => {
     if (!RARITY.includes(r)) return "";
     const n = RARITY.indexOf(r) + 1;
-    return `<span class="rar" aria-label="${esc(RARITY_LABEL[r])}" title="${esc(RARITY_LABEL[r])}">${"◆".repeat(n)}<span class="off">${"◆".repeat(4 - n)}</span></span>`;
+    return `<span class="rar" style="--rc:${RARITY_COLOR[r]}" aria-label="${esc(RARITY_LABEL[r])}" title="${esc(RARITY_LABEL[r])}">${"◆".repeat(n)}<span class="off">${"◆".repeat(5 - n)}</span>${withLabel ? `<b>${esc(RARITY_LABEL[r].toUpperCase())}</b>` : ""}</span>`;
   };
+  const iucnHtml = c => IUCN[c] ? `<span class="iucn" style="--ic:${IUCN[c][1]}" title="Rødlistestatus (IUCN)">${esc(IUCN[c][0])} · ${c}</span>` : "";
+  const grade = n => n >= 9 ? "S" : n >= 7 ? "A" : n >= 5 ? "B" : n >= 3 ? "C" : "D";
+
+  // Level grows with photos of the species, battle wins, rarity and shiny finds; Kampkraft (KK) sums it up in one number.
+  const xpForLevel = L => 8 * (L - 1) ** 2;
+  const levelOf = xp => Math.min(50, 1 + Math.floor(Math.sqrt(xp / 8)));
+  function speciesPower(sp, trainer) {
+    const wins = (state.players.get(trainer)?.swins || {})[sp.key] || 0;
+    const shiny = sp.photos.some(p => p.shiny);
+    const xp = sp.photos.length * 100 + wins * 60 + rIdx(sp.info.rarity) * 50 + (shiny ? 150 : 0);
+    const level = levelOf(xp);
+    const st = sp.info.stats || {};
+    const v = k => clamp(st[k] ?? 5, 1, 10);
+    const kk = Math.round((v("styrke") * 14 + v("fart") * 10 + v("snilde") * 10 + v("nuttethed") * 4) * (1 + rIdx(sp.info.rarity) * 0.15) * (1 + level / 40) * (shiny ? 1.15 : 1));
+    return { xp, level, kk, shiny, wins, next: xpForLevel(level + 1), cur: xpForLevel(level) };
+  }
+
+  function radarSvg(stats, color) {
+    const val = k => clamp(stats?.[k] ?? 0, 0, 10);
+    const r = k => val(k) / 10 * 40;
+    const pts = `50,${50 - r("fart")} ${50 + r("styrke")},50 50,${50 + r("snilde")} ${50 - r("nuttethed")},50`;
+    const ring = f => `<polygon points="50,${50 - 40 * f} ${50 + 40 * f},50 50,${50 + 40 * f} ${50 - 40 * f},50" fill="none" stroke="currentColor" stroke-opacity=".22"/>`;
+    return `<svg class="radar" viewBox="-34 -10 168 120" role="img" aria-label="Fart ${val("fart")}, styrke ${val("styrke")}, snilde ${val("snilde")}, nuttethed ${val("nuttethed")}" style="color:var(--lcd-ink)">
+      ${ring(1)}${ring(0.66)}${ring(0.33)}
+      <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-opacity=".18"/><line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" stroke-opacity=".18"/>
+      <polygon points="${pts}" fill="${color}" fill-opacity=".5" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/>
+      <text x="50" y="3" text-anchor="middle">FART ${grade(val("fart"))}</text>
+      <text x="92" y="53" text-anchor="start">STY ${grade(val("styrke"))}</text>
+      <text x="50" y="106" text-anchor="middle">SNILDE ${grade(val("snilde"))}</text>
+      <text x="8" y="53" text-anchor="end">NUT ${grade(val("nuttethed"))}</text>
+    </svg>`;
+  }
 
   function render() {
     cmMemo = null;
@@ -867,7 +953,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     renderCounter(); renderKeys(); renderStrip(); renderDex(); renderViewer();
     const ach = allAch();
     renderBadges(ach); checkBadges(ach); updateSummary(ach);
-    renderViewing();
+    renderViewing(); renderMissions();
     if (document.activeElement?.id !== "nick") renderTrainers();
     if (B.stage === "pick") renderBattle();
   }
@@ -901,9 +987,11 @@ Sydkaper|Eubalaena australis|m|🐋`,
     const caught = !!e.sp;
     const show = nameShown(e);
     const label = `Nummer ${e.no}, ${show ? e.name : "ukendt dyr"}${caught ? ", fanget" : ", ikke fanget"}`;
-    return `<button class="tile${caught ? " caught" : ""}${state.selected === e.key ? " sel" : ""}" data-key="${esc(e.key)}" aria-label="${esc(label)}">
+    const pw = caught ? speciesPower(e.sp, state.viewing) : null;
+    const r = caught ? e.sp.info.rarity : "";
+    return `<button class="tile${caught ? ` caught r-${rIdx(r)}` : ""}${pw?.shiny ? " shiny" : ""}${state.selected === e.key ? " sel" : ""}" data-key="${esc(e.key)}" aria-label="${esc(label)}${pw ? `, ${RARITY_LABEL[r] || ""}, kampkraft ${pw.kk}` : ""}" ${caught ? `style="--rc:${RARITY_COLOR[r] || "transparent"}"` : ""}>
       <span class="no">${pad(e.no)}</span>${caught ? '<span class="ball" aria-hidden="true"></span>' : ""}${e.bonus ? '<span class="bonus-tag" aria-hidden="true">B</span>' : ""}
-      <span class="art">${caught ? `<img src="${esc(thumbSrc(e.sp.photos[0]))}" alt="" loading="lazy" decoding="async">` : `<span class="sil" aria-hidden="true">${e.emoji}</span>`}</span>
+      <span class="art">${caught ? `<img src="${esc(thumbSrc(e.sp.photos[0]))}" alt="" loading="lazy" decoding="async"><span class="kkb">KK ${pw.kk}</span>${pw.shiny ? '<span class="shn" aria-hidden="true">✨</span>' : ""}` : `<span class="sil" aria-hidden="true">${e.emoji}</span>`}</span>
       <span class="nm">${show ? esc(e.name) : "???"}</span>
     </button>`;
   }
@@ -945,12 +1033,14 @@ Sydkaper|Eubalaena australis|m|🐋`,
       ${state.viewCard ? cardHtml(e, p) : `<div class="v-art"><img src="${esc(photoSrc(p))}" alt="${esc(e.name)}"></div>`}
       ${sp.photos.length > 1 ? `<div class="thumbs">${sp.photos.map((ph, n) => `<button data-ph="${n}" aria-label="Billede ${n + 1}" aria-current="${n === state.photoIdx}"><img src="${esc(thumbSrc(ph))}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
       ${state.viewCard ? "" : `<div><h2 class="v-name">${esc(e.name)}</h2><p class="v-latin">${esc(e.latin || "")}${i.nameEn ? ` · ${esc(i.nameEn)}` : ""}</p></div>
-      <div class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity)}</div>`}
+      <div class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity, true)}${iucnHtml(i.iucn)}</div>`}
+      ${p.shiny ? `<p class="shinyline">✨ Shiny-variant${p.variant ? `: ${esc(p.variant)}` : ""}</p>` : ""}
       ${vague ? `<p class="small" style="color:var(--danger)">Kun bestemt til ${esc(p.specificity || "slægt eller familie")}. Tryk "Bestem præcis art".</p>` : ""}
       ${i.description && !state.viewCard ? `<p class="small">${esc(i.description)}</p>` : ""}
-      ${i.stats && !state.viewCard ? `<div class="stats">${STATS.map(([k, label]) => { const n = clamp(i.stats[k], 0, 10); return `<div class="stat"><span>${label}</span><span class="bar"><i style="width:${n * 10}%"></i></span><b>${n}</b></div>`; }).join("")}</div>` : ""}
+      ${i.stats && !state.viewCard ? statPanel(e, sp) : ""}
       <dl class="facts">
         <dt>Fundet</dt><dd>${esc(fmtDate(p.takenAt || p.createdAt))}${p.place ? `, ${esc(p.place)}` : ""}${mapLink}${sp.photos.length > 1 ? ` (billede ${state.photoIdx + 1}/${sp.photos.length})` : ""}</dd>
+        ${i.rarityWhy ? `<dt>Sjælden?</dt><dd>${esc(i.rarityWhy)}</dd>` : ""}
         ${i.size ? `<dt>Størrelse</dt><dd>${esc(i.size)}</dd>` : ""}
         ${i.habitat ? `<dt>Levested</dt><dd>${esc(i.habitat)}</dd>` : ""}
         ${p.idTips ? `<dt>Kendetegn</dt><dd>${esc(p.idTips)}</dd>` : ""}
@@ -964,6 +1054,20 @@ Sydkaper|Eubalaena australis|m|🐋`,
         ${state.confirmDel ? `<button class="btn sm" data-act="del-yes">Slet billedet</button><button class="btn ghost sm" data-act="del-no">Behold</button>` : `<button class="btn ghost sm" data-act="del">Slet billede</button>`}
       </div>` : ""}`;
     if (state.viewCard) mountCard(p);
+  }
+
+  function statPanel(e, sp) {
+    const i = sp.info, pw = speciesPower(sp, state.viewing);
+    const best = STATS.map(([k, label]) => [label, clamp(i.stats[k], 0, 10)]).sort((a, b) => b[1] - a[1])[0];
+    const pct = pw.level >= 50 ? 100 : Math.round((pw.xp - pw.cur) / (pw.next - pw.cur) * 100);
+    return `<div class="statpanel">${radarSvg(i.stats, RARITY_COLOR[i.rarity] || (CAT[e.cat] || CAT.andet).c)}
+      <div class="power">
+        <div class="kk">${pw.kk}<small>KAMPKRAFT</small></div>
+        <div class="lv"><span>LV ${pw.level}</span><span>${pw.level >= 50 ? "MAKS" : `${pw.xp}/${pw.next} XP`}</span></div>
+        <span class="xpbar"><i style="width:${pct}%"></i></span>
+        <span class="spec">Bedst til: ${esc(best[0].toLowerCase())} (${grade(best[1])}) · ${sp.photos.length} ${sp.photos.length === 1 ? "billede" : "billeder"}${pw.wins ? ` · ${pw.wins} ${pw.wins === 1 ? "sejr" : "sejre"}` : ""}</span>
+        <span class="spec">Flere billeder og sejre giver XP og højere level.</span>
+      </div></div>`;
   }
 
   function refineHtml(p) {
@@ -1001,7 +1105,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   /* ---------- holo card: the real photo as a foil trading card; the animal sits on its own layer ---------- */
   const CARD = { rx: 0, ry: 0, tx: 0, ty: 0, active: false, raf: 0, tilt: null, tiltSeen: false };
-  const HOLO = { almindelig: .45, "usædvanlig": .65, "sjælden": .85, legendarisk: 1 };
+  const HOLO = { almindelig: .45, "usædvanlig": .6, "sjælden": .78, episk: .92, legendarisk: 1.05 };
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // Outline points come as [[x, y], …] (0–1, from the top left). Stored flat to keep the document simple.
@@ -1051,7 +1155,7 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
     else if (!p.outline && state.vision && (state.memory || state.assets) && isMine()) hint += ` <button class="btn ghost sm" data-act="outline">Lad dyret poppe ud</button>`;
     else if (p.outline && state.vision && (state.memory || state.assets) && isMine()) hint += ` <button class="btn ghost sm" data-act="outline">Find omrids igen</button>`;
     return `<div class="card-stage" id="cstage">
-      <div class="pcard" id="pcard" style="--c:${c};--holo:${HOLO[i.rarity] ?? .5}">
+      <div class="pcard" id="pcard" style="--c:${c};--holo:${p.shiny ? 1.3 : (HOLO[i.rarity] ?? .5)}">
         <div class="pc-body">
           <div class="pc-top"><b>${esc(e.name)}</b><span>No.${pad(e.no)}</span></div>
           <div class="pc-art" id="pcart">
@@ -1060,6 +1164,7 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
             <div class="pc-foil"></div><div class="pc-glare"></div>
           </div>
           <div class="pc-meta"><span class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}</span>${rarityHtml(i.rarity)}</div>
+          <div class="pc-meta"><b class="lcdfont" style="font-size:18px">KK ${speciesPower(e.sp, state.viewing).kk} · LV ${speciesPower(e.sp, state.viewing).level}</b>${p.shiny ? `<b style="color:#b0179b">✨ SHINY</b>` : ""}</div>
           ${e.latin ? `<div class="pc-meta"><i>${esc(e.latin)}</i></div>` : ""}
           ${i.description ? `<p class="pc-desc">${esc(i.description)}</p>` : ""}
           ${i.stats ? `<div class="pc-stats">${STATS.map(([k, label]) => `<span>${label}<span class="bar"><i style="width:${clamp(i.stats[k], 0, 10) * 10}%"></i></span></span>`).join("")}</div>` : ""}
@@ -1198,13 +1303,21 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
       countOf("collector", "📘", "Samler", "Arter i din Dyredex.", [10, 50, 100], c => c.caught.length),
       countOf("paparazzi", "📸", "Paparazzi", "Billeder i alt.", [25, 100, 250], c => c.photos.length),
       countOf("legend", "💎", "Legendarisk", "Fang et legendarisk dyr.", [1], c => c.caught.filter(e => e.sp.info.rarity === "legendarisk").length),
-      countOf("rare", "💠", "Sjældenhedsjæger", "Sjældne og legendariske arter.", [3, 10, 25], c => c.caught.filter(e => ["sjælden", "legendarisk"].includes(e.sp.info.rarity)).length),
+      countOf("rare", "💠", "Sjældenhedsjæger", "Sjældne, episke og legendariske arter.", [3, 10, 25], c => c.caught.filter(e => rIdx(e.sp.info.rarity) >= 2).length),
+      countOf("epic", "🔮", "Episk samler", "Episke eller legendariske arter.", [1, 5], c => c.caught.filter(e => rIdx(e.sp.info.rarity) >= 3).length),
+      countOf("shiny", "✨", "Shiny-jæger", "Arter fanget i en sjælden farvevariant.", [1, 3, 10], c => c.caught.filter(e => e.sp.photos.some(p => p.shiny)).length),
+      countOf("redlist", "🛟", "Naturbeskytter", "Truede arter (sårbar, truet eller kritisk truet).", [1, 5, 15], c => c.caught.filter(e => ["VU", "EN", "CR", "EW"].includes(e.sp.info.iucn)).length),
+      countOf("lvl", "⭐", "Mestertræner", "Højeste level på et af dine dyr.", [10, 20, 35], c => Math.max(0, ...c.caught.map(e => speciesPower(e.sp, state.viewing).level))),
       countOf("explorer", "🧭", "Opdagelsesrejsende", "Bonusdyr uden for kataloget.", [1, 5, 10], c => c.caught.filter(e => e.bonus).length),
     ] },
     { group: "Battle", list: [
       countOf("win1", "🥊", "Første sejr", "Vind en kamp med et af dine dyr.", [1], c => c.player.wins || 0),
       countOf("wins", "🏆", "Kampveteran", "Sejre i alt.", [5, 25, 100], c => c.player.wins || 0),
       countOf("giant", "🪨", "David mod Goliat", "Vind over et dyr, der er meget stærkere end dit.", [1], c => c.player.giants || 0),
+    ] },
+    { group: "Daglige missioner", list: [
+      countOf("daily", "📅", "Missionær", "Dage hvor alle tre missioner blev klaret.", [1, 7, 30], c => (c.player.daily || []).length),
+      countOf("streak", "🔥", "I streg", "Dage i træk med klarede missioner.", [3, 7, 14], c => streakOf(c.player.daily || [])),
     ] },
     { group: "Sjove", list: [
       countOf("spiders", "🕷️", "Ikke bange for edderkopper", "Forskellige edderkoppedyr.", [5], c => c.caught.filter(e => e.cat === "edderkoppedyr").length),
@@ -1405,7 +1518,11 @@ Svar KUN med ét JSON-objekt i præcis dette format:
   "category": en af ${JSON.stringify(CATS.map(c => c.id))},
   "region": en af ${JSON.stringify(REGIONS.map(r => r.id))} (hvor arten naturligt lever; "dk" hvis den lever vildt i Danmark, "hav" for havdyr og polardyr),
   "types": 1-2 værdier fra ${JSON.stringify(TYPES)},
-  "rarity": en af ${JSON.stringify(RARITY)} (hvor svært det er at møde dyret${ctx.length ? " der hvor billedet er taget" : ""}; husdyr og almindelige byfugle er "almindelig"),
+  "rarity": en af ${JSON.stringify(RARITY)}: hvor sjældent arten ses i naturen på verdensplan (bestandens størrelse, hvor truet den er, og hvor sky og skjult den lever), IKKE hvor billedet er taget. "almindelig" = husdyr, kæledyr, byfugle og meget almindelige vilde arter; "usædvanlig" = vilde dyr man ser af og til; "sjælden" = sky, skjulte eller meget lokale arter; "episk" = truede arter eller dyr der er meget svære at opleve; "legendarisk" = kritisk truede arter eller dyr der næsten aldrig ses i naturen,
+  "rarityWhy": "1 kort sætning om hvorfor arten har den sjældenhed, fx 'Kritisk truet; kun omkring 14.000 tilbage på Sumatra'",
+  "iucn": IUCN-rødlistestatus, en af ["LC","NT","VU","EN","CR","EW","DD"] (tom streng for husdyr og kæledyr),
+  "shiny": true KUN hvis netop dette individ har en usædvanlig farvevariant for arten (albino, leucistisk/bleg, melanistisk/sort eller et meget usædvanligt mønster); ellers false. Almindelig forskel på han/hun, unger eller årstidsdragt tæller ikke,
+  "variant": "hvis shiny: kort beskrivelse, fx 'leucistisk, næsten hvid pels'; ellers tom streng",
   "confidence": tal mellem 0 og 1,
   "alternatives": op til 3 objekter {"name": "...", "latin": "..."} med andre arter det kunne være (ellers []),
   "idTips": "1 sætning om hvilke kendetegn på billedet der peger på netop denne art frem for lignende arter",
@@ -1439,6 +1556,8 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(r.stats?.[k], 1, 10)])),
       confidence: clamp(r.confidence, 0, 1), place,
       notReal: r.isReal === false, fake: String(r.fake || "").trim(),
+      rarityWhy: String(r.rarityWhy || "").trim(), iucn: IUCN[r.iucn] ? r.iucn : "",
+      shiny: r.shiny === true, variant: r.shiny === true ? String(r.variant || "").trim() : "",
       outline: cleanOutline(r.outline),
     };
     const cat = CATALOG_BY_KEY.get(keyFor(d));
@@ -1694,6 +1813,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       specificity: d.specificity || "", types: d.types || [], rarity: d.rarity || "almindelig",
       description: d.description || "", funFact: d.funFact || "", size: d.size || "", habitat: d.habitat || "",
       idTips: d.idTips || "", stats: d.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
+      rarityWhy: d.rarityWhy || "", iucn: d.iucn || "", shiny: !!d.shiny, variant: d.variant || "",
       ...(d.outline ? { outline: d.outline } : {}),
       ...extra,
     };
@@ -1732,7 +1852,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       render();
       refreshQueueStatus();
       if (!quiet) {
-        if (isNew) celebrate(preview, doc.assetId ? "/_blob/" + doc.assetId : urlOf(it));
+        if (isNew || doc.shiny) celebrate({ ...preview, shinyNew: !!doc.shiny, known: !isNew }, doc.assetId ? "/_blob/" + doc.assetId : urlOf(it));
         else toast(`Nyt billede af ${preview.name}`);
       }
       return isNew ? preview.name : true;
@@ -1819,6 +1939,78 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       toast(e.sp.photos.length > 1 ? "Billedet er slettet" : `${e.name} er ikke længere fanget`);
       render();
     } catch { toast("Billedet kunne ikke slettes. Prøv igen."); }
+  }
+
+  /* ---------- daily missions: three per day, the same for everyone, picked from the date ---------- */
+  const dayKeyOf = ms => { const d = new Date(ms || 0); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const today = () => dayKeyOf(Date.now());
+  function seeded(str) {
+    let h = 2166136261;
+    for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; };
+  }
+  function streakOf(days) {
+    const set = new Set(days);
+    const d = new Date();
+    if (!set.has(dayKeyOf(d.getTime()))) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (set.has(dayKeyOf(d.getTime()))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  const MISSION_CATS = [["fugl", "en fugl"], ["insekt", "et insekt"], ["pattedyr", "et pattedyr"], ["edderkoppedyr", "et edderkoppedyr"], ["krybdyr", "et krybdyr"]];
+  const MISSION_TYPES = ["Skov", "By", "Vand", "Luft", "Mark", "Hjem"];
+  function missionsFor(day) {
+    const rnd = seeded("dyredex-" + day);
+    const pick = arr => arr[Math.floor(rnd() * arr.length)];
+    const pool = [
+      () => ({ id: "new", text: "Registrér et nyt dyr", goal: 1 }),
+      () => { const n = 2 + Math.floor(rnd() * 3); return { id: "photos", text: `Tag ${n} dyrebilleder`, goal: n }; },
+      () => { const [c, label] = pick(MISSION_CATS); return { id: "cat", cat: c, text: `Fang ${label}`, goal: 1 }; },
+      () => { const t = pick(MISSION_TYPES); return { id: "type", type: t, text: `Fang et dyr af typen ${t}`, goal: 1 }; },
+      () => { const n = 1 + Math.floor(rnd() * 3); return { id: "wins", text: `Vind ${n} ${n === 1 ? "kamp" : "kampe"} i Battle`, goal: n }; },
+      () => ({ id: "cute", text: "Fang et dyr med nuttethed 8 eller mere", goal: 1 }),
+      () => ({ id: "rare", text: "Fang et usædvanligt eller sjældnere dyr", goal: 1 }),
+    ];
+    const out = [], used = new Set();
+    while (out.length < 3) { const k = Math.floor(rnd() * pool.length); if (!used.has(k)) { used.add(k); out.push(pool[k]()); } }
+    return out;
+  }
+  function missionProgress(m, day) {
+    const todays = state.mine.filter(x => dayKeyOf(x.createdAt) === day);
+    if (m.id === "new") {
+      const first = new Map();
+      for (const x of [...state.mine].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))) if (!first.has(x.key)) first.set(x.key, x.createdAt);
+      return [...first.values()].filter(t => dayKeyOf(t) === day).length;
+    }
+    if (m.id === "photos") return todays.length;
+    if (m.id === "cat") return todays.filter(x => x.category === m.cat).length;
+    if (m.id === "type") return todays.filter(x => (x.types || []).includes(m.type)).length;
+    if (m.id === "wins") { const w = state.players.get(state.me)?.winsDay; return w?.d === day ? w.n : 0; }
+    if (m.id === "cute") return todays.filter(x => Number(x.stats?.nuttethed) >= 8).length;
+    if (m.id === "rare") return todays.filter(x => rIdx(x.rarity) >= 1).length;
+    return 0;
+  }
+  function renderMissions() {
+    const el = $("#missions");
+    if (!isMine() || !state.loaded) { el.hidden = true; return; }
+    const day = today();
+    const ms = missionsFor(day).map(m => ({ ...m, have: Math.min(m.goal, missionProgress(m, day)) }));
+    const done = ms.every(m => m.have >= m.goal);
+    const player = state.players.get(state.me) || {};
+    const days = player.daily || [];
+    if (done && !days.includes(day)) {
+      const next = [...days, day].slice(-120);
+      state.players.set(state.me, { ...player, daily: next });
+      if (state.db && !state.memory) state.db.collection("players").doc(state.me).update({ daily: next }).catch(() => {});
+      if (store.get("dyredex-daily") !== day) {
+        store.set("dyredex-daily", day);
+        showOverlay(overlayHtml("Dagens missioner klaret!", `<div class="ub"><span style="font-size:54px;font-family:var(--font-emoji)">🔥</span><h3>${streakOf(next)} ${streakOf(next) === 1 ? "dag" : "dage"} i træk</h3><p class="small">Kom igen i morgen for nye missioner og en længere streak.</p><button class="btn" id="unlock-ok">Fedt!</button></div>`, { color: "#e06a1a", confetti: confettiHtml(30, ["#f7c843", "#e06a1a", "#ffffff"]) }));
+      }
+    }
+    const streak = streakOf(state.players.get(state.me)?.daily || []);
+    el.hidden = false;
+    el.innerHTML = `<div class="mh"><span>DAGENS MISSIONER</span><span>${done ? '<span class="all">ALLE KLARET!</span>' : `${ms.filter(m => m.have >= m.goal).length}/3 KLARET`} · 🔥 ${streak} ${streak === 1 ? "DAG" : "DAGE"}</span></div>
+      <ul>${ms.map(m => `<li class="${m.have >= m.goal ? "done" : ""}"><span>${m.have >= m.goal ? "✓" : "○"}</span><span class="t">${esc(m.text)}</span><span>${m.have}/${m.goal}</span></li>`).join("")}</ul>`;
   }
 
   /* ---------- trainers: everyone keeps their own dex under players/<id>/ ---------- */
@@ -2017,13 +2209,14 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   function makeFighter(sp, trainer) {
     const i = sp.info, st = i.stats || {};
     const v = k => clamp(st[k] ?? 5, 1, 10);
-    const level = Math.min(50, 5 + sp.photos.length * 2 + Math.max(0, RARITY.indexOf(i.rarity)) * 6);
+    const pw = speciesPower(sp, trainer);
+    const level = pw.level;
     const lv = 1 + level / 100;
     const maxHp = Math.round((60 + v("styrke") * 7 + v("snilde") * 2) * lv);
     return { key: sp.key, trainer, name: spName(sp), latin: CATALOG_BY_KEY.get(sp.key)?.latin || i.latin || "", cat: i.category || "andet",
       types: i.types?.length ? i.types : ["Mark"], src: thumbSrc(sp.photos[0]), level, maxHp, hp: maxHp,
       atk: (6 + v("styrke") * 2 + v("fart") * 0.5) * lv, def: (6 + v("snilde") * 1.4 + v("styrke") * 0.8) * lv,
-      spe: v("fart"), cute: v("nuttethed"), styrke: v("styrke"), moves: null, poison: false, stun: false, atkUp: 0, defUp: 0 };
+      spe: v("fart"), cute: v("nuttethed"), styrke: v("styrke"), moves: null, poison: false, stun: false, atkUp: 0, defUp: 0, kk: pw.kk, sp };
   }
 
   async function ensureMoves(fs) {
@@ -2055,7 +2248,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
     return `<section class="b-side"><h3>${label}<button class="btn ghost sm" data-bact="random" data-side="${which}">Tilfældig</button></h3>
       ${ids.length > 1 ? `<select data-bsel="${which}" aria-label="Træner">${ids.map(id => `<option value="${esc(id)}" ${id === sd.trainer ? "selected" : ""}>${esc(trainerName(id))}${id === state.me ? " (dig)" : ""}</option>`).join("")}</select>` : ""}
       ${roster === null ? `<p class="b-empty">Henter dyr…</p>` : roster.length
-        ? `<div class="b-roster">${roster.map(sp => `<button data-bpick="${which}" data-key="${esc(sp.key)}" aria-pressed="${sd.key === sp.key}"><img src="${esc(thumbSrc(sp.photos[0]))}" alt="" loading="lazy"><span>${esc(spName(sp))}</span></button>`).join("")}</div>`
+        ? `<div class="b-roster">${roster.map(sp => `<button data-bpick="${which}" data-key="${esc(sp.key)}" aria-pressed="${sd.key === sp.key}"><img src="${esc(thumbSrc(sp.photos[0]))}" alt="" loading="lazy"><span>${esc(spName(sp))}</span><span class="kkmini">KK ${speciesPower(sp, sd.trainer).kk} · LV ${speciesPower(sp, sd.trainer).level}</span></button>`).join("")}</div>`
         : `<p class="b-empty">Ingen fangede dyr endnu.</p>`}
     </section>`;
   }
@@ -2074,7 +2267,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
       <div class="bmsg" id="bmsg" aria-live="polite">${esc(B.msg)}</div>
       ${B.over
         ? `<div class="bctl"><button class="btn" data-bact="rematch">Omkamp</button><button class="btn blue" data-bact="new">Ny kamp</button></div>`
-        : `${a.moves ? `<div class="bmoves">${a.moves.map((m, i) => `<button data-bmove="${i}" ${B.busy || B.auto ? "disabled" : ""} title="${esc(m.desc)}"><b>${esc(m.name)}</b><small>${esc(m.type)} · ${m.power ? `Styrke ${m.power}` : EFFECT_LABEL[m.effect]}${m.power && m.effect !== "none" ? ` · ${EFFECT_LABEL[m.effect]}` : ""} · ${m.acc}%</small></button>`).join("")}</div>` : ""}
+        : `${a.moves ? `<div class="bmoves">${a.moves.map((m, i) => { const ef = m.power ? effectiveness(m.type, b.types) : 1; return `<button data-bmove="${i}" ${B.busy || B.auto ? "disabled" : ""} title="${esc(m.desc)}"><b>${esc(m.name)}${ef > 1.01 ? '<em class="eff up">Effektiv</em>' : ef < 0.99 ? '<em class="eff down">Svag</em>' : ""}</b><small>${esc(m.type)} · ${m.power ? `Styrke ${m.power}` : EFFECT_LABEL[m.effect]}${m.power && m.effect !== "none" ? ` · ${EFFECT_LABEL[m.effect]}` : ""} · ${m.acc}%</small></button>`; }).join("")}</div>` : ""}
         <div class="bctl"><label class="toggle"><input type="checkbox" id="bauto" ${B.auto ? "checked" : ""}> Auto-kamp</label>${state.tts ? `<label class="toggle"><input type="checkbox" id="bspeak" ${B.speak ? "checked" : ""}> Læs op</label>` : ""}<button class="btn ghost-dark sm" data-bact="quit">Giv op</button></div>`}`;
   }
 
@@ -2157,19 +2350,29 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
     await say(`${winner.name} vinder kampen!`);
     if (B.f && B.f.a.trainer === state.me && !B.recorded) {
       B.recorded = true;
-      const won = winner === B.f.a;
-      recordBattle(won, won && B.f.b.styrke - B.f.a.styrke >= 4);
+      const a = B.f.a, won = winner === a;
+      const before = speciesPower(a.sp, state.me).level;
+      recordBattle(won, won && B.f.b.styrke - a.styrke >= 4, a.key);
+      if (won) {
+        await say(`${a.name} fik 60 XP!`);
+        const after = speciesPower(a.sp, state.me).level;
+        if (after > before) await say(`${a.name} steg til level ${after}!`);
+      }
     }
     B.busy = false;
     renderBattle();
   }
 
-  async function recordBattle(won, giant) {
+  async function recordBattle(won, giant, key) {
     const p = state.players.get(state.me) || {};
-    const upd = won ? { wins: (p.wins || 0) + 1, ...(giant ? { giants: (p.giants || 0) + 1 } : {}) } : { losses: (p.losses || 0) + 1 };
+    const day = today();
+    const upd = won
+      ? { wins: (p.wins || 0) + 1, swins: { ...(p.swins || {}), [key]: ((p.swins || {})[key] || 0) + 1 },
+          winsDay: { d: day, n: (p.winsDay?.d === day ? p.winsDay.n : 0) + 1 }, ...(giant ? { giants: (p.giants || 0) + 1 } : {}) }
+      : { losses: (p.losses || 0) + 1 };
     state.players.set(state.me, { ...p, ...upd });
     if (state.db && !state.memory) state.db.collection("players").doc(state.me).update(upd).catch(() => {});
-    if (isMine()) { const ach = allAch(); renderBadges(ach); checkBadges(ach); }
+    if (isMine()) { const ach = allAch(); renderBadges(ach); checkBadges(ach); renderMissions(); }
   }
 
   async function playerMove(idx) {
@@ -2237,16 +2440,28 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
     ov.onclick = ev => { if (ev.target === ov) close(); };
     ov.onkeydown = ev => { if (ev.key === "Escape") close(); };
   }
-  const overlayHtml = (label, body) => `<div class="unlock" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="flash"></div><div class="u"><div class="lbl">${esc(label.toUpperCase())}</div>${body}</div></div>`;
+  const overlayHtml = (label, body, opt = {}) => `<div class="unlock" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="flash"></div>${opt.confetti || ""}<div class="u" ${opt.color ? `style="--uc:${opt.color}"` : ""}><div class="lbl">${esc(label.toUpperCase())}</div>${body}</div></div>`;
+  function confettiHtml(n, colors) {
+    if (!n || reducedMotion()) return "";
+    let out = "";
+    for (let k = 0; k < n; k++) out += `<i style="--x:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 0.9).toFixed(2)}s;--c:${colors[k % colors.length]}"></i>`;
+    return `<div class="confetti" aria-hidden="true">${out}</div>`;
+  }
 
   function celebrate(e, src) {
-    showOverlay(overlayHtml(e.bonus ? "Nyt bonusdyr!" : "Nyt dyr registreret!", `<img src="${esc(src)}" alt="">
+    const r = e.sp?.info?.rarity, ri = rIdx(r);
+    const label = e.shinyNew ? "✨ Shiny fundet! ✨" : ["Nyt dyr registreret!", "Usædvanligt fund!", "Sjældent fund!", "Episk fund!", "Legendarisk fund!"][ri];
+    const color = e.shinyNew ? "#c22aa8" : RARITY_COLOR[r];
+    const confetti = e.shinyNew ? confettiHtml(46, ["#ff7ad9", "#7ad7ff", "#fff27a", "#ffffff"]) : confettiHtml([0, 0, 18, 32, 50][ri], [RARITY_COLOR[r], "#f7c843", "#ffffff"]);
+    showOverlay(overlayHtml(label, `<img src="${esc(src)}" alt="">
       <div class="ub">
         <span class="lcdfont" style="font-size:22px">No.${pad(e.no)}${e.region ? ` · ${esc(REGION[e.region].label.toUpperCase())}` : ""}</span>
         <h3>${esc(e.name)}</h3>
-        <div class="chips">${catHtml(e.cat)}${rarityHtml(e.sp?.info?.rarity)}</div>
+        <div class="chips">${catHtml(e.cat)}${rarityHtml(e.sp?.info?.rarity, true)}${iucnHtml(e.sp?.info?.iucn)}</div>
+        ${e.shinyNew && e.sp?.info?.variant ? `<p class="small">${esc(e.sp.info.variant)}</p>` : ""}
+        ${e.bonus && !e.known ? `<p class="small">Bonusdyr uden for kataloget</p>` : ""}
         <button class="btn" id="unlock-ok">Fedt!</button>
-      </div>`));
+      </div>`, { color, confetti }));
   }
   function celebrateBadges(list) {
     showOverlay(overlayHtml(list.length > 1 ? `${list.length} achievements låst op!` : "Achievement låst op!", `<div class="ub">
@@ -2377,6 +2592,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${need[0].key}": [4 angr
     renderDex();
   });
   $("#q").addEventListener("input", e => { state.q = e.target.value; renderDex(); });
+  $("#sort").addEventListener("change", e => { state.sort = e.target.value; renderDex(); });
   $("#shownames").checked = state.showNames;
   $("#shownames").addEventListener("change", e => { state.showNames = e.target.checked; store.set("dyredex-names", e.target.checked ? "1" : "0"); renderDex(); renderViewer(); });
   $("#dex").addEventListener("click", e => { const t = e.target.closest(".tile"); if (t) select(t.dataset.key, true); });
