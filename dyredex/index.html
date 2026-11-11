@@ -470,12 +470,9 @@
   .b-f.out .tagout { display: block; }
   .b-f.win { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--yellow), 0 0 18px rgb(255 196 50 / .8); }
   .b-f.champ b::before { content: "★ "; color: #c98a00; }
-  .story { background: var(--tile); color: var(--tile-ink); border-radius: 10px; padding: 14px 16px; min-height: 130px; font-size: 15px; line-height: 1.6; box-shadow: inset 0 -4px 0 var(--bezel-lo); }
-  .story h4 { font-family: var(--font-display); font-size: 17px; margin: 14px 0 4px; color: var(--case-lo); text-transform: uppercase; letter-spacing: .03em; }
-  .story h4:first-child { margin-top: 0; }
-  .story p { margin: 0 0 8px; max-width: 68ch; }
-  .story .wait { font-family: var(--font-lcd); font-size: 20px; color: var(--tile-dim); animation: blink 1.2s steps(2, start) infinite; }
-  @keyframes blink { to { visibility: hidden; } }
+  .bcanvas { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 0 0 4px var(--case-lo); background: #223; touch-action: pan-y; }
+  .bticker { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 8px 12px; min-height: 42px; font-family: var(--font-lcd); font-size: 21px; line-height: 1.2; box-shadow: inset 0 0 0 3px var(--case-lo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 880px) { .b-fighters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .b-f img { width: 44px; height: 44px; } .b-f { padding: 6px 2px 5px; } }
   .b-result { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; box-shadow: inset 0 0 0 3px var(--case-lo); }
   .b-result h3 { font-family: var(--font-display); font-size: 22px; color: var(--yellow); }
   .b-result ol { margin: 0; padding-left: 24px; font-family: var(--font-lcd); font-size: 19px; }
@@ -605,7 +602,7 @@
             <li>Tryk <b>SCAN</b> og vælg et billede af et dyr. AI'en finder arten.</li>
             <li>Registrér dyret, så låser det op. Silhuetterne viser, hvad du mangler.</li>
             <li>Har du mange gamle billeder? Brug <b>Importér fotoalbum</b>.</li>
-            <li>Sæt flere dyr op mod hinanden i <b>Battle</b>, og få kampen fortalt. Sammenlign med venner under <b>Trænere</b>.</li>
+            <li>Sæt flere dyr op mod hinanden i <b>Battle</b>, og se dem kæmpe. Sammenlign med venner under <b>Trænere</b>.</li>
           </ol>
           <div><button class="btn sm" id="helpok">Forstået</button></div>
         </div>
@@ -931,7 +928,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
-    viewCard: false, dexes: [], dexForm: null, refresh: null, confirmDex: false,
+    viewCard: false, specials: new Map(), dexes: [], dexForm: null, refresh: null, confirmDex: false,
     me: null, viewing: null, mine: [], players: new Map(), names: new Map(), unsubOther: null, user: null, tts: null,
   };
   const importKeys = new Set(), importSigs = new Set();
@@ -2399,11 +2396,11 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
     } catch {} finally { backfilling = false; }
   }
 
-  /* ---------- battle: pick several animals, and the fight is simulated and told as a story ---------- */
+  /* ---------- battle: pick several animals and watch them fight it out in a simulated arena ---------- */
   const ARENAS = [["tilfaeldig", "Tilfældig arena"], ["savanne", "Savannen ved solnedgang"], ["jungle", "Den tætte jungle"], ["skov", "Den danske skov"],
     ["kyst", "Kysten, halvt vand og halvt land"], ["hav", "Det åbne hav"], ["bjerg", "De stejle bjerge"], ["is", "Isen i polarnatten"], ["oerken", "Den brændende ørken"], ["by", "Byen om natten"]];
   const MAX_FIGHTERS = 6;
-  const B = { stage: "pick", lineup: [], champ: null, browse: null, arena: "tilfaeldig", rosters: new Map(), run: null, speak: false };
+  const B = { stage: "pick", lineup: [], champ: null, browse: null, arena: "tilfaeldig", rosters: new Map(), run: null };
   const spName = sp => CATALOG_BY_KEY.get(sp.key)?.name || sp.info.name;
   const uidOf = x => `${x.trainer}|${x.key}`;
 
@@ -2430,7 +2427,7 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
   function renderBattle() {
     const el = $("#battle");
     if (state.tab !== "battle") return;
-    if (B.stage !== "pick" && B.run) { el.innerHTML = fightHtml(B.run); return; }
+    if (B.stage !== "pick" && B.run) { el.innerHTML = fightHtml(B.run); drawArena(B.run, $("#bcanvas")); return; }
     if (!B.browse || !trainerIds().includes(B.browse)) B.browse = state.me;
     B.lineup = B.lineup.filter(x => rosterOf(x.trainer) === null || lineupSp(x));
     fixChamp();
@@ -2445,7 +2442,7 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
     }).join("");
     const ready = B.lineup.length >= 2;
     el.innerHTML = `<section class="b-panel"><h3>Kampens deltagere <span class="kkmini">${B.lineup.length}/${MAX_FIGHTERS}</span></h3>
-        ${B.lineup.length ? `<div class="b-lineup">${chips}</div>` : `<p class="b-empty">Vælg 2-${MAX_FIGHTERS} dyr herunder. Alle kæmper mod alle, og AI'en fortæller, hvordan det går.</p>`}
+        ${B.lineup.length ? `<div class="b-lineup">${chips}</div>` : `<p class="b-empty">Vælg 2-${MAX_FIGHTERS} dyr herunder. Alle kæmper mod alle i arenaen, og du ser kampen udspille sig.</p>`}
         ${B.champ ? `<p class="b-empty">★ er din kæmper. Vinder den, tæller det som en sejr og giver XP.</p>` : ""}
       </section>
       <section class="b-panel"><h3>Vælg dyr <span><button class="btn ghost sm" data-bact="random">Tilføj tilfældigt</button> ${B.lineup.length ? `<button class="btn ghost sm" data-bact="clear">Ryd</button>` : ""}</span></h3>
@@ -2461,128 +2458,290 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
       </div>`;
   }
 
+  // Each arena has its own colours, and animals whose types belong there fight a little better.
+  const ARENA_LOOK = {
+    savanne: { sky: "#f6d59a", ground: "#c99a4e", spot: "rgba(120,80,20,.18)", types: ["Mark"] },
+    jungle: { sky: "#3e8a52", ground: "#1f5a33", spot: "rgba(10,40,20,.25)", types: ["Jungle", "Skov"] },
+    skov: { sky: "#8fbf7a", ground: "#4f7f3f", spot: "rgba(30,60,20,.22)", types: ["Skov"] },
+    kyst: { sky: "#7fc8e8", ground: "#e3cf96", spot: "rgba(255,255,255,.25)", types: ["Vand", "Hav"] },
+    hav: { sky: "#3f8fd0", ground: "#1b4f8f", spot: "rgba(255,255,255,.14)", types: ["Hav", "Vand"] },
+    bjerg: { sky: "#b9c4d0", ground: "#7b8794", spot: "rgba(60,70,80,.25)", types: ["Bjerg"] },
+    is: { sky: "#e8f4fb", ground: "#b5d6ea", spot: "rgba(255,255,255,.55)", types: ["Is"] },
+    oerken: { sky: "#f7dfa3", ground: "#dba95a", spot: "rgba(160,100,30,.2)", types: ["Ørken"] },
+    by: { sky: "#2a2f45", ground: "#161a2a", spot: "rgba(255,220,120,.12)", types: ["By", "Nat", "Hjem"] },
+  };
+  const SPECIAL_KINDS = ["dash", "roar", "heal", "poison", "shield", "stun"];
+  const SPECIAL_FALLBACK = { pattedyr: ["Stormløb", "dash"], fugl: ["Styrtdyk", "dash"], krybdyr: ["Skælpanser", "shield"], padde: ["Slimskud", "stun"], fisk: ["Halesmæld", "dash"],
+    insekt: ["Sværm", "poison"], edderkoppedyr: ["Giftbid", "poison"], bloeddyr: ["Blækspy", "stun"], krebsdyr: ["Klopanser", "shield"], andet: ["Brøl", "roar"] };
+
   function makeRun() {
     const names = B.lineup.map(x => { const sp = lineupSp(x); return sp ? spName(sp) : ""; });
+    const arenaId = B.arena === "tilfaeldig" ? ARENAS[1 + Math.floor(Math.random() * (ARENAS.length - 1))][0] : B.arena;
+    const look = ARENA_LOOK[arenaId];
+    const W = 1000, H = isPhone() ? 1000 : 640;
     const fighters = B.lineup.map((x, n) => {
       const sp = lineupSp(x); if (!sp) return null;
       const pw = speciesPower(sp, x.trainer), i = sp.info, st = i.stats || {};
+      const v = k => clamp(st[k] ?? 5, 1, 10);
       const dup = names.filter(nm => nm === names[n]).length > 1;
+      const home = (i.types || []).some(t => look.types.includes(t));
+      const mult = Math.sqrt((1 + pw.level / 40) * (1 + rIdx(i.rarity) * 0.05) * (pw.shiny ? 1.08 : 1) * (home ? 1.12 : 1)) * (0.9 + Math.random() * 0.2);
+      const maxHp = Math.round((210 + v("styrke") * 11 + v("snilde") * 5) * mult);
+      const ang = n / B.lineup.length * Math.PI * 2 - Math.PI / 2;
+      const img = new Image(); img.src = thumbSrc(sp.photos[0]);
       return { id: "ABCDEF"[n], uid: uidOf(x), trainer: x.trainer, key: sp.key, sp, name: names[n], dn: dup ? `${gen(trainerName(x.trainer))} ${names[n]}` : names[n],
-        latin: CATALOG_BY_KEY.get(sp.key)?.latin || i.latin || "", src: thumbSrc(sp.photos[0]), level: pw.level, kk: pw.kk, shiny: pw.shiny,
-        variant: sp.photos.find(ph => ph.shiny)?.variant || "", types: i.types || [], rarity: i.rarity || "almindelig",
-        stats: Object.fromEntries(STATS.map(([k]) => [k, clamp(st[k] ?? 5, 1, 10)])), form: 1 + Math.floor(Math.random() * 10), out: false };
+        latin: CATALOG_BY_KEY.get(sp.key)?.latin || i.latin || "", cat: CAT[i.category] ? i.category : "andet", src: img.src, img, level: pw.level, kk: pw.kk, home,
+        r: 58 + v("styrke") * 3, x: W / 2 + Math.cos(ang) * W * 0.34, y: H / 2 + Math.sin(ang) * H * 0.32, vx: 0, vy: 0,
+        maxHp, hp: maxHp, atk: (13 + v("styrke") * 1.5) * mult, def: 1 + v("snilde") * 0.04 + v("styrke") * 0.02,
+        speed: 190 + v("fart") * 30, cd: 0.4 + Math.random() * 0.6, rate: 1.1 - v("fart") * 0.04,
+        crit: 0.05 + v("snilde") * 0.015, dodge: 0.04 + v("fart") * 0.016 + v("snilde") * 0.008 + (10 - v("styrke")) * 0.008, charm: v("nuttethed") * 0.009,
+        back: 0, stagger: 0, side: Math.random() < 0.5 ? 1 : -1,
+        energy: Math.random() * 0.4, gain: 0.07 + v("snilde") * 0.006, special: null, target: null, retarget: 0,
+        flash: 0, stun: 0, shield: 0, poison: 0, ptick: 0, dashT: 0, venom: false, out: false, fade: 1 };
     }).filter(Boolean);
-    const arenaId = B.arena === "tilfaeldig" ? ARENAS[1 + Math.floor(Math.random() * (ARENAS.length - 1))][0] : B.arena;
-    return { fighters, arena: ARENAS.find(a => a[0] === arenaId)[1], champ: B.champ, text: "", blocks: [], outs: [], winner: null, done: false, local: false, spoken: 0, ctl: null, note: "", reward: "" };
+    const decor = Array.from({ length: 8 }, () => [Math.random() * W, Math.random() * H, 60 + Math.random() * 130]);
+    return { fighters, arenaId, arena: ARENAS.find(a => a[0] === arenaId)[1], look, W, H, decor, champ: B.champ, t: 0, fx: [], outs: [], winner: null, done: false,
+      speed: 1, ticker: "", sudden: false, endAnim: 0, reward: "" };
   }
 
-  function battlePrompt(run) {
-    const n = run.fighters.length;
-    return `Du er kommentator i "Dyredex Battle": en fantasikamp mellem rigtige dyr, fortalt som en blanding af naturfilm og sportskommentator.
-Fortæl dramatisk, levende og med lidt humor på dansk, hvordan kampen går. Brug dyrenes rigtige evner, våben og adfærd (fart, kæber, kløer, gift, panser, flugt, list, flyvning, svømning).
+  async function ensureSpecials(fs) {
+    const need = [...new Map(fs.filter(f => !state.specials.has(f.key)).map(f => [f.key, f])).values()];
+    const ok = x => x && SPECIAL_KINDS.includes(x.kind) && String(x.name || "").trim();
+    const keep = (f, x) => state.specials.set(f.key, { name: String(x.name).trim().slice(0, 20), kind: x.kind });
+    if (state.db && !state.memory) await Promise.all(need.map(async f => {
+      try { const d = await state.db.collection("specials").doc(f.key).get(); if (d.exists && ok(d.data())) keep(f, d.data()); } catch {}
+    }));
+    const missing = need.filter(f => !state.specials.has(f.key));
+    if (missing.length && state.sample) {
+      try {
+        const r = await state.sample.json(`Giv hvert dyr ét specialangreb til et kampspil med rigtige dyr. Det skal bygge på dyrets rigtige evner og adfærd.
+${missing.map(f => `- ${f.key}: ${f.name} (${f.latin || "?"})`).join("\n")}
 
-Arena: ${run.arena}.
-Deltagere:
-${run.fighters.map(f => `${f.id}: ${f.dn} (${f.latin || "?"}), træner ${trainerName(f.trainer)}. Level ${f.level}, kampkraft ${f.kk}, dagsform ${f.form}/10. Fart ${f.stats.fart}, styrke ${f.stats.styrke}, snilde ${f.stats.snilde}, nuttethed ${f.stats.nuttethed}.${f.types.length ? ` Typer: ${f.types.join("/")}.` : ""} Sjældenhed: ${f.rarity}.${f.shiny ? ` Shiny-variant${f.variant ? ` (${f.variant})` : ""}.` : ""}`).join("\n")}
-
-Regler for udfaldet:
-- Alle kæmper mod alle, og præcis ét dyr vinder.
-- Udfaldet skal være troværdigt ud fra dyrenes rigtige styrker og svagheder og arenaen (en fisk er hjælpeløs på land, en fugl kan flyve væk, et lille dyr kan gemme sig), men kampkraft, level og dagsform tæller også. Høj dagsform kan give en overraskelse, og lav dagsform kan vælte en favorit.
-- Hold det familievenligt: intet blod, og ingen dyr dør eller kommer alvorligt til skade. Tabere giver op, flygter, bliver udmattede, bliver overlistet eller besvimer.
-
-Format (følg det præcist):
-- ${n <= 2 ? "3" : n <= 4 ? "3-4" : "4-5"} korte runder. Hver runde starter med en linje "## Runde 1: <kort titel>" og har derefter 2-4 sætninger.
-- Når et dyr er ude af kampen, så skriv på en linje for sig selv lige efter afsnittet: [UDE: bogstav], fx [UDE: B]
-- Slut med linjen "## Afgørelsen", 2-3 sætninger om det sidste opgør, og til allersidst på en linje for sig selv: [VINDER: bogstav]
-- Brug dyrenes navne i teksten, aldrig bogstaverne. Ingen anden formatering, ingen lister. Højst ${150 + n * 45} ord i alt.`;
-  }
-
-  // Used when the AI is unavailable: the same kind of fight, decided by Kampkraft and form and told with stock lines.
-  function localStory(run) {
-    const alive = [...run.fighters];
-    const w = f => f.kk * (0.5 + f.form / 10);
-    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-    const move = f => { const best = STATS.map(([k]) => [k, f.stats[k]]).sort((a, b) => b[1] - a[1])[0][0];
-      return { fart: "lyner frem hurtigere, end øjet kan følge", styrke: "tromler frem med rå kraft", snilde: "lægger en snedig fælde", nuttethed: "ser så uimodståelig ud, at modstanderen glemmer at kæmpe" }[best]; };
-    const exit = ["må trække sig udmattet tilbage", "vælger klogeligt at flygte", "giver op og lunter væk", "besvimer af bar overraskelse"];
-    let out = `## Runde 1: Kampen begynder\n${alive.map(f => f.dn).join(", ").replace(/, ([^,]*)$/, " og $1")} træder ind i arenaen: ${run.arena.toLowerCase()}. Luften sitrer, og ingen vil vige først.\n\n`;
-    let round = 1;
-    while (alive.length > 1) {
-      const inv = alive.map(f => 1 / w(f)), sum = inv.reduce((a, b) => a + b, 0);
-      let r = Math.random() * sum, idx = 0;
-      while (idx < inv.length - 1 && (r -= inv[idx]) > 0) idx++;
-      const loser = alive.splice(idx, 1)[0];
-      const att = [...alive].sort((a, b) => w(b) - w(a))[Math.random() < 0.7 ? 0 : Math.floor(Math.random() * alive.length)];
-      round++;
-      if (alive.length > 1) out += `## Runde ${round}: ${pick(["Presset stiger", "Et uventet angreb", "Kaos i arenaen", "Ingen vej tilbage"])}\n${att.dn} ${move(att)}! ${loser.dn} kæmper imod, men ${pick(exit)}.\n[UDE: ${loser.id}]\n\n`;
-      else out += `## Afgørelsen\nKun to er tilbage. ${att.dn} ${move(att)}, og ${loser.dn} ${pick(exit)}. ${att.dn} står alene tilbage som kampens vinder!\n[UDE: ${loser.id}]\n[VINDER: ${att.id}]`;
+"kind" er en af: "dash" (lynhurtigt stormløb, spring eller styrtdyk), "roar" (brøl eller trusselsadfærd, der skubber alle væk), "heal" (hviler, slikker sår eller gemmer sig), "poison" (gift, brod eller giftigt bid), "shield" (panser, skal, pigge eller tyk hud), "stun" (lammer, blænder, spinder ind eller skræmmer en modstander).
+"name" er 1-2 ord på dansk, højst 18 tegn, fx "Lianesving".
+Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${missing[0].key}": {"name": "...", "kind": "..."}}`, { modelTier: "quick", cache: false });
+        for (const f of missing) if (ok(r?.[f.key])) {
+          keep(f, r[f.key]);
+          if (state.db && !state.memory) state.db.collection("specials").doc(f.key).set(state.specials.get(f.key)).catch(() => {});
+        }
+      } catch {}
     }
-    return out;
+    for (const f of fs) f.special = state.specials.get(f.key) || { name: SPECIAL_FALLBACK[f.cat][0], kind: SPECIAL_FALLBACK[f.cat][1] };
   }
 
-  function parseStory(text, ids) {
-    const outs = []; let winner = null;
-    const clean = String(text || "").replace(/\[\s*(UDE|VINDER)\s*:\s*([A-F])\s*\]/gi, (m, t, id) => {
-      id = id.toUpperCase();
-      if (ids.includes(id)) { if (t.toUpperCase() === "UDE") { if (!outs.includes(id)) outs.push(id); } else winner = id; }
-      return "";
-    }).replace(/\[[^\]\n]*$/, "");
-    const blocks = []; let cur = null;
-    for (const raw of clean.split("\n")) {
-      const line = raw.replace(/\*\*/g, "").trim();
-      if (!line) { cur = null; continue; }
-      if (line.startsWith("#")) { blocks.push({ h: true, t: line.replace(/^#+\s*/, "") }); cur = null; }
-      else if (cur) cur.t += " " + line;
-      else blocks.push(cur = { h: false, t: line });
-    }
-    return { blocks, outs: outs.filter(id => id !== winner), winner };
+  /* --- simulation: everything below runs on a 1000-wide logical arena, 60 steps a second --- */
+  function say(run, text) { run.ticker = text; const el = $("#bticker"); if (el && B.run === run) el.textContent = text; }
+  const fxText = (run, x, y, text, color, size = 40, life = 0.9) => run.fx.push({ kind: "text", x, y, text, color, size, life, t: 0, rise: 70 });
+  const fxRing = (run, x, y, r0, r1, color, life = 0.5) => run.fx.push({ kind: "ring", x, y, r0, r1, color, life, t: 0 });
+  function fxSparks(run, x, y, color, n = 6) {
+    for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, sp = 150 + Math.random() * 260; run.fx.push({ kind: "spark", x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, color, life: 0.35 + Math.random() * 0.2, t: 0 }); }
   }
-  const storyHtml = (run) => run.blocks.map(b => b.h ? `<h4>${esc(b.t)}</h4>` : `<p>${esc(b.t)}</p>`).join("") + (run.done ? "" : `<p class="wait">${run.blocks.length ? "…" : "KAMPEN GÅR I GANG…"}</p>`);
+
+  function hurt(run, f, dmg, color = "#fff") {
+    if (f.out) return;
+    if (f.shield > 0) dmg *= 0.45;
+    dmg = Math.max(1, Math.round(dmg));
+    f.hp -= dmg; f.flash = 1;
+    fxText(run, f.x + (Math.random() - 0.5) * 40, f.y - f.r - 10, String(dmg), color, 38, 0.8);
+    if (f.hp > 0) return;
+    f.hp = 0; f.out = true; f.fade = 1;
+    run.outs.push(f.id);
+    fxRing(run, f.x, f.y, f.r * 0.6, f.r * 2.4, "#ffffff", 0.6); fxSparks(run, f.x, f.y, "#ffffff", 12);
+    fxText(run, f.x, f.y - f.r - 50, "UDE!", "#ff6b6b", 54, 1.3);
+    say(run, `${f.dn} er ude!`);
+    if (B.run === run) $("#bf-" + f.id)?.classList.add("out");
+  }
+
+  function useSpecial(run, f, alive) {
+    const s = f.special || { name: "Angreb", kind: "dash" };
+    fxText(run, f.x, f.y - f.r - 56, s.name.toUpperCase() + "!", "#ffe35a", 46, 1.3);
+    fxRing(run, f.x, f.y, f.r, f.r + 60, "#ffe35a", 0.4);
+    say(run, `${f.dn} bruger ${s.name}!`);
+    const others = alive.filter(o => o !== f && !o.out);
+    if (s.kind === "dash") { f.dashT = 1.3; f.cd = 0; }
+    else if (s.kind === "poison") { f.venom = true; f.dashT = 0.7; f.cd = 0; }
+    else if (s.kind === "shield") f.shield = 3.5;
+    else if (s.kind === "heal") { const h = Math.round(Math.min(f.maxHp - f.hp, f.maxHp * 0.22)); f.hp += h; if (h) fxText(run, f.x, f.y - f.r - 10, "+" + h, "#7dff9a", 40, 1); }
+    else if (s.kind === "stun") {
+      const t = others.sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y))[0];
+      if (t) { t.stun = 1.8; fxText(run, t.x, t.y - t.r - 14, "LAMMET", "#c9b6ff", 36, 1.1); }
+    } else {
+      fxRing(run, f.x, f.y, f.r, 380, "#ffffff", 0.55);
+      for (const o of others) {
+        const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy) || 1;
+        if (d > 400) continue;
+        o.vx += dx / d * 620; o.vy += dy / d * 620; o.stun = Math.max(o.stun, 0.5);
+        hurt(run, o, f.atk * 0.55 / o.def);
+      }
+    }
+  }
+
+  function tryStrike(run, a, b, rage) {
+    if (a.cd > 0 || a.stun > 0 || a.out || b.out) return;
+    a.cd = a.rate * (0.85 + Math.random() * 0.3);
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
+    if (Math.random() < b.charm) { fxText(run, a.x, a.y - a.r - 10, "AWW…", "#ffb3e6", 34, 0.9); return; }
+    if (Math.random() < b.dodge) { fxText(run, b.x, b.y - b.r - 10, "UNDVIG!", "#9ad8ff", 34, 0.8); b.vx = -ny * 420 * b.side; b.vy = nx * 420 * b.side; b.stagger = 0.2; a.back = 0.3; return; }
+    const crit = Math.random() < a.crit;
+    const dmg = a.atk * (0.6 + Math.random() * 0.8) / b.def * (a.dashT > 0 ? 1.8 : 1) * (crit ? 1.8 : 1) * rage;
+    const kb = 430 + dmg * 7;
+    b.vx = nx * kb; b.vy = ny * kb; b.stagger = 0.28;
+    a.vx = -nx * 260; a.vy = -ny * 260; a.back = 0.45 + Math.random() * 0.45; a.side = Math.random() < 0.5 ? 1 : -1;
+    fxSparks(run, a.x + nx * a.r, a.y + ny * a.r, crit ? "#ffe35a" : "#ffffff", crit ? 10 : 5);
+    if (crit) { fxText(run, b.x, b.y - b.r - 48, "KRIT!", "#ffe35a", 40, 0.9); say(run, `Fuldtræffer fra ${a.dn}!`); }
+    if (a.venom) { a.venom = false; b.poison = 4; b.ptick = 0.8; fxText(run, b.x, b.y - b.r - 14, "FORGIFTET", "#7bd65a", 34, 1.1); }
+    a.dashT = 0;
+    hurt(run, b, dmg, crit ? "#ffe35a" : "#fff");
+  }
+
+  function simStep(run, dt) {
+    run.t += dt;
+    const { W, H } = run;
+    const rage = run.t > 40 ? 1 + (run.t - 40) * 0.12 : 1;
+    if (run.t > 40 && !run.sudden) { run.sudden = true; fxText(run, W / 2, H * 0.24, "SUDDEN DEATH", "#ff6b6b", 64, 2); say(run, "Sudden death! Alle slag gør mere skade."); }
+    const alive = run.fighters.filter(f => !f.out);
+    for (const f of run.fighters) {
+      if (f.out) { f.fade = Math.max(0, f.fade - dt * 1.6); continue; }
+      f.flash = Math.max(0, f.flash - dt * 4); f.cd -= dt; f.shield = Math.max(0, f.shield - dt); f.dashT = Math.max(0, f.dashT - dt);
+      if (f.poison > 0) { f.poison -= dt; f.ptick -= dt; if (f.ptick <= 0) { f.ptick = 0.8; hurt(run, f, f.maxHp * 0.03 * rage, "#7bd65a"); if (f.out) continue; } }
+      f.back = Math.max(0, f.back - dt);
+      if (f.stun > 0) { f.stun -= dt; f.vx *= 0.9; f.vy *= 0.9; }
+      else if (f.stagger > 0) { f.stagger -= dt; f.vx *= 0.94; f.vy *= 0.94; }
+      else {
+        f.retarget -= dt;
+        if (!f.target || f.target.out || f.retarget <= 0) {
+          const others = alive.filter(o => o !== f && !o.out);
+          others.sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
+          const roll = Math.random(), leader = [...others].sort((a, b) => b.hp - a.hp)[0];
+          f.target = !others.length ? null : roll < 0.5 ? others[0] : roll < 0.8 ? leader : others[Math.floor(Math.random() * others.length)];
+          f.retarget = 1.5 + Math.random() * 2;
+        }
+        const t = f.target;
+        if (t) {
+          const dx = t.x - f.x, dy = t.y - f.y, d = Math.hypot(dx, dy) || 1;
+          const sp = f.speed * (f.dashT > 0 ? 2.6 : 1), wob = Math.sin(run.t * 2.3 + f.r) * 0.3;
+          let tvx = (dx / d - dy / d * wob) * sp, tvy = (dy / d + dx / d * wob) * sp;
+          if (f.back > 0 && f.dashT <= 0) {
+            // Backing off: away from the target in an arc, drifting towards the middle so the whole arena gets used.
+            const cx = (W / 2 - f.x) / W, cy = (H / 2 - f.y) / H;
+            tvx = (-dx / d * 0.7 - dy / d * 0.7 * f.side + cx * 1.2) * sp; tvy = (-dy / d * 0.7 + dx / d * 0.7 * f.side + cy * 1.2) * sp;
+          }
+          const k = Math.min(1, dt * (f.dashT > 0 ? 8 : 4));
+          f.vx += (tvx - f.vx) * k; f.vy += (tvy - f.vy) * k;
+        }
+        f.energy += f.gain * dt;
+        if (f.energy >= 1) { f.energy = 0; useSpecial(run, f, alive); }
+      }
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      const pad = f.r + 22;
+      if (f.x < pad) { f.x = pad; f.vx = Math.abs(f.vx) * 0.8; } else if (f.x > W - pad) { f.x = W - pad; f.vx = -Math.abs(f.vx) * 0.8; }
+      if (f.y < pad + 30) { f.y = pad + 30; f.vy = Math.abs(f.vy) * 0.8; } else if (f.y > H - pad - 44) { f.y = H - pad - 44; f.vy = -Math.abs(f.vy) * 0.8; }
+    }
+    for (let i = 0; i < alive.length; i++) for (let j = i + 1; j < alive.length; j++) {
+      const a = alive[i], b = alive[j];
+      if (a.out || b.out) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, min = a.r + b.r;
+      if (d >= min + 8) continue;
+      if (d < min) { const push = (min - d) / 2, nx = dx / d, ny = dy / d; a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push; }
+      if (Math.random() < 0.5) { tryStrike(run, a, b, rage); tryStrike(run, b, a, rage); } else { tryStrike(run, b, a, rage); tryStrike(run, a, b, rage); }
+    }
+    for (const e of run.fx) e.t += dt;
+    run.fx = run.fx.filter(e => e.t < e.life);
+    const left = run.fighters.filter(f => !f.out);
+    if (left.length === 1) run.winner = left[0].id;
+    else if (!left.length) { const id = run.outs.pop(); const f = run.fighters.find(x => x.id === id); Object.assign(f, { out: false, hp: 1, fade: 1 }); run.winner = id; if (B.run === run) $("#bf-" + id)?.classList.remove("out"); }
+    else if (run.t > 120) { left.sort((a, b) => b.hp / b.maxHp - a.hp / a.maxHp); for (const f of left.slice(1).reverse()) hurt(run, f, f.hp + 999); run.winner = left[0].id; }
+    if (run.winner) { const w = run.fighters.find(f => f.id === run.winner); say(run, `${w.dn} vinder kampen!`); }
+  }
+
+  function outlined(c, text, x, y, fill, size) {
+    c.font = `${size}px VT323, ui-monospace, monospace`; c.textAlign = "center"; c.lineJoin = "round";
+    c.lineWidth = Math.max(4, size / 6); c.strokeStyle = "rgba(0,0,0,.8)"; c.strokeText(text, x, y);
+    c.fillStyle = fill; c.fillText(text, x, y);
+  }
+
+  function drawArena(run, cv) {
+    const cw = cv.clientWidth; if (!cw) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), sc = cw / run.W;
+    const pw = Math.round(cw * dpr), ph = Math.round(cw * run.H / run.W * dpr);
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+    const c = cv.getContext("2d"), { W, H, look } = run, TAU = Math.PI * 2;
+    c.setTransform(dpr * sc, 0, 0, dpr * sc, 0, 0);
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, look.sky); g.addColorStop(1, look.ground);
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.fillStyle = look.spot;
+    for (const [bx, by, br] of run.decor) { c.beginPath(); c.ellipse(bx, by, br, br * 0.42, 0, 0, TAU); c.fill(); }
+    if (run.sudden && !run.winner) { const v = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8); v.addColorStop(0, "rgba(200,0,0,0)"); v.addColorStop(1, "rgba(200,0,0,.4)"); c.fillStyle = v; c.fillRect(0, 0, W, H); }
+    for (const f of [...run.fighters].sort((a, b) => a.y - b.y)) {
+      if (f.out && f.fade <= 0) continue;
+      c.save();
+      c.globalAlpha = f.out ? f.fade : 1;
+      const r = f.r * (f.out ? 0.6 + 0.4 * f.fade : 1), x = f.x + (f.flash > 0 ? (Math.random() - 0.5) * 12 * f.flash : 0), y = f.y;
+      c.fillStyle = "rgba(0,0,0,.22)"; c.beginPath(); c.ellipse(x, y + r * 0.95, r * 0.9, r * 0.26, 0, 0, TAU); c.fill();
+      if (f.dashT > 0) for (let k = 1; k <= 3; k++) { c.fillStyle = `rgba(255,255,255,${0.2 - k * 0.05})`; c.beginPath(); c.arc(x - f.vx * 0.035 * k, y - f.vy * 0.035 * k, r, 0, TAU); c.fill(); }
+      c.save(); c.beginPath(); c.arc(x, y, r, 0, TAU); c.clip();
+      if (f.img.complete && f.img.naturalWidth) { const iw = f.img.naturalWidth, ih = f.img.naturalHeight, s = Math.max(2 * r / iw, 2 * r / ih); c.drawImage(f.img, x - iw * s / 2, y - ih * s / 2, iw * s, ih * s); }
+      else { c.fillStyle = (CAT[f.cat] || CAT.andet).c; c.fillRect(x - r, y - r, 2 * r, 2 * r); outlined(c, f.name.slice(0, 1), x, y + r * 0.3, "#fff", r); }
+      if (f.poison > 0) { c.fillStyle = "rgba(90,200,60,.32)"; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+      if (f.stun > 0) { c.fillStyle = "rgba(120,120,170,.4)"; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+      if (f.flash > 0) { c.fillStyle = `rgba(255,255,255,${0.7 * f.flash})`; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+      c.restore();
+      c.lineWidth = 6; c.strokeStyle = f.uid === run.champ ? "#f7c843" : "#ffffff"; c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke();
+      if (f.shield > 0) { c.lineWidth = 8; c.strokeStyle = "rgba(90,170,255,.9)"; c.beginPath(); c.arc(x, y, r + 22, 0, TAU); c.stroke(); }
+      if (!f.out) {
+        const hp = f.hp / f.maxHp, a0 = -Math.PI / 2;
+        c.lineWidth = 10; c.strokeStyle = "rgba(0,0,0,.5)"; c.beginPath(); c.arc(x, y, r + 9, 0, TAU); c.stroke();
+        c.strokeStyle = hp > 0.5 ? "#39d86a" : hp > 0.22 ? "#f0c02a" : "#f0453a"; c.beginPath(); c.arc(x, y, r + 9, a0, a0 + TAU * hp); c.stroke();
+        c.lineWidth = 4; c.strokeStyle = "#ffe35a"; c.beginPath(); c.arc(x, y, r + 17, a0, a0 + TAU * Math.min(1, f.energy)); c.stroke();
+        if (f.stun > 0) outlined(c, "✶ ✶ ✶", x, y - r - 22, "#c9b6ff", 34);
+        if (!run.winner) outlined(c, f.name.length > 13 ? f.name.slice(0, 12) + "…" : f.name, x, y + r + 44, f.uid === run.champ ? "#ffe35a" : "#ffffff", 30);
+      }
+      c.restore();
+    }
+    for (const e of run.fx) {
+      const p = e.t / e.life;
+      c.globalAlpha = Math.max(0, 1 - p * p);
+      if (e.kind === "text") outlined(c, e.text, Math.max(90, Math.min(W - 90, e.x)), Math.max(40, e.y - p * e.rise), e.color, e.size);
+      else if (e.kind === "ring") { c.lineWidth = 9 * (1 - p) + 2; c.strokeStyle = e.color; c.beginPath(); c.arc(e.x, e.y, e.r0 + (e.r1 - e.r0) * p, 0, TAU); c.stroke(); }
+      else { c.fillStyle = e.color; c.beginPath(); c.arc(e.x + e.vx * e.t, e.y + e.vy * e.t, 8 * (1 - p) + 1, 0, TAU); c.fill(); }
+    }
+    c.globalAlpha = 1;
+    if (run.winner) {
+      const w = run.fighters.find(f => f.id === run.winner), k = Math.min(1, run.endAnim * 1.5);
+      c.fillStyle = `rgba(0,0,0,${0.4 * k})`; c.fillRect(0, 0, W, H);
+      c.save(); c.translate(w.x, w.y); c.rotate(run.endAnim * 0.6);
+      for (let n = 0; n < 12; n++) { c.rotate(TAU / 12); c.fillStyle = `rgba(255,227,90,${0.28 * k})`; c.beginPath(); c.moveTo(0, 0); c.lineTo(-26, -w.r * 3.2); c.lineTo(26, -w.r * 3.2); c.fill(); }
+      c.restore();
+      c.save(); c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.clip();
+      if (w.img.complete && w.img.naturalWidth) { const iw = w.img.naturalWidth, ih = w.img.naturalHeight, s = Math.max(2 * w.r / iw, 2 * w.r / ih); c.drawImage(w.img, w.x - iw * s / 2, w.y - ih * s / 2, iw * s, ih * s); }
+      else { c.fillStyle = (CAT[w.cat] || CAT.andet).c; c.fillRect(w.x - w.r, w.y - w.r, 2 * w.r, 2 * w.r); }
+      c.restore();
+      c.lineWidth = 8; c.strokeStyle = "#ffe35a"; c.beginPath(); c.arc(w.x, w.y, w.r, 0, TAU); c.stroke();
+      outlined(c, "VINDER!", Math.max(140, Math.min(W - 140, w.x)), Math.max(70, w.y - w.r - 30), "#ffe35a", 72);
+      outlined(c, w.name, Math.max(140, Math.min(W - 140, w.x)), Math.min(H - 20, w.y + w.r + 56), "#ffffff", 40);
+    }
+  }
+
   const fighterCls = (run, f) => `b-f${f.out ? " out" : ""}${run.winner === f.id && run.done ? " win" : ""}${run.champ === f.uid ? " champ" : ""}`;
 
   function fightHtml(run) {
     const placing = run.done && run.winner ? [run.fighters.find(f => f.id === run.winner), ...[...run.outs].reverse().map(id => run.fighters.find(f => f.id === id))].filter(Boolean) : [];
     const win = placing[0];
-    return `<div class="b-fighters">${run.fighters.map(f => `<div class="${fighterCls(run, f)}" id="bf-${f.id}"><img src="${esc(f.src)}" alt=""><span class="tagout">UDE</span><b>${esc(f.name)}</b><small>${esc(trainerName(f.trainer))}</small><small class="kkmini">KK ${f.kk} · LV ${f.level}</small></div>`).join("")}</div>
-      <div style="font-size:14px">Arena: <b>${esc(run.arena)}</b>${run.note ? ` · ${esc(run.note)}` : ""}</div>
-      <article class="story" id="bstory" aria-live="polite">${storyHtml(run)}</article>
+    return `<canvas class="bcanvas" id="bcanvas" style="aspect-ratio:${run.W} / ${run.H}" role="img" aria-label="Kamparena: ${esc(run.arena)}"></canvas>
+      <div class="bticker" id="bticker" aria-live="polite">${esc(run.ticker)}</div>
+      <div class="b-fighters">${run.fighters.map(f => `<div class="${fighterCls(run, f)}" id="bf-${f.id}"><img src="${esc(f.src)}" alt=""><span class="tagout">UDE</span><b>${esc(f.name)}</b><small>${esc(f.special ? f.special.name : trainerName(f.trainer))}</small><small class="kkmini">KK ${f.kk}${f.home ? " · HJEMMEBANE" : ""}</small></div>`).join("")}</div>
       ${run.done ? `<div class="b-result">
           ${win ? `<h3>🏆 ${esc(win.dn)} vinder!</h3><ol>${placing.map(f => `<li>${esc(f.dn)} (${esc(trainerName(f.trainer))})</li>`).join("")}</ol>` : `<h3>Kampen endte uafgjort</h3>`}
-          ${run.reward ? `<p>${esc(run.reward)}</p>` : ""}
-          <div class="bctl"><button class="btn" data-bact="rematch">Omkamp</button><button class="btn blue" data-bact="new">Ny kamp</button><button class="btn ghost-dark sm" data-bact="copy">Kopiér historien</button>${state.tts ? `<button class="btn ghost-dark sm" data-bact="read">Læs op</button>` : ""}</div>
+          <p>${run.reward ? esc(run.reward) + " " : ""}Kampen varede ${Math.round(run.t)} sekunder i ${esc(run.arena.toLowerCase())}.</p>
+          <div class="bctl"><button class="btn" data-bact="rematch">Omkamp</button><button class="btn blue" data-bact="new">Ny kamp</button></div>
         </div>`
-        : `<div class="bctl">${state.tts ? `<label class="toggle"><input type="checkbox" id="bspeak" ${B.speak ? "checked" : ""}> Læs op undervejs</label>` : ""}<button class="btn ghost-dark sm" data-bact="stop">Stop kampen</button></div>`}`;
+        : `<div class="bctl"><button class="btn blue sm" data-bact="speed" id="bspeed">Hastighed ${run.speed}x</button><button class="btn ghost-dark sm" data-bact="skip">Spring til resultat</button><button class="btn ghost-dark sm" data-bact="stop">Stop</button></div>`}`;
   }
 
-  function speakBlocks(run, upTo) {
-    if (!state.tts) return;
-    const lines = run.blocks.slice(run.spoken, upTo).map(b => ({ text: b.t.slice(0, 1900) }));
-    run.spoken = Math.max(run.spoken, upTo);
-    if (!lines.length) return;
-    try { (state.tts.add ? state.tts.add(lines) : state.tts.speak(lines.map(l => l.text).join(" ").slice(0, 1900))).catch(() => {}); } catch {}
-  }
-
-  // Called for every streamed chunk: updates the story and who is still standing without redrawing the whole view.
-  function applyStory(run, text) {
-    if (B.run !== run) return;
-    run.text = text;
-    const ps = parseStory(text, run.fighters.map(f => f.id));
-    Object.assign(run, { blocks: ps.blocks, outs: ps.outs, winner: ps.winner });
-    for (const f of run.fighters) f.out = ps.outs.includes(f.id);
-    const st = $("#bstory");
-    if (st) st.innerHTML = storyHtml(run);
-    for (const f of run.fighters) { const el = $("#bf-" + f.id); if (el) el.className = fighterCls(run, f); }
-    if (B.speak) speakBlocks(run, Math.max(0, run.blocks.length - 1));
-  }
-
-  function finishFight(run, text) {
-    if (B.run !== run) return;
-    applyStory(run, text);
-    const left = run.fighters.filter(f => !f.out);
-    if (!run.winner && left.length === 1) run.winner = left[0].id;
-    if (run.winner) { run.outs = run.outs.filter(id => id !== run.winner); for (const f of run.fighters) if (f.id !== run.winner && !run.outs.includes(f.id)) run.outs.unshift(f.id); for (const f of run.fighters) f.out = f.id !== run.winner; }
-    run.done = true; B.stage = "done";
-    if (B.speak) speakBlocks(run, run.blocks.length);
+  function finishFight(run) {
+    if (B.run !== run || run.done) return;
+    run.done = true; B.stage = "done"; run.fx = [];
+    for (const f of run.fighters) if (f.id !== run.winner && !run.outs.includes(f.id)) run.outs.unshift(f.id);
     const champ = run.fighters.find(f => f.uid === run.champ);
     if (champ && run.winner) {
       const won = champ.id === run.winner;
@@ -2596,43 +2755,41 @@ Format (følg det præcist):
     renderBattle();
   }
 
+  function skipFight(run) {
+    if (!run || run.done) return;
+    for (let n = 0; !run.winner && n < 60 * 200; n++) simStep(run, 1 / 60);
+    run.endAnim = 3;
+    finishFight(run);
+  }
+
+  function battleLoop(run) {
+    let last = performance.now(), acc = 0;
+    const frame = now => {
+      if (B.run !== run || run.done) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (!run.winner) { acc += dt * run.speed; while (acc >= 1 / 60 && !run.winner) { simStep(run, 1 / 60); acc -= 1 / 60; } }
+      else { run.endAnim += dt; for (const e of run.fx) e.t += dt; run.fx = run.fx.filter(e => e.t < e.life); for (const f of run.fighters) if (f.out) f.fade = Math.max(0, f.fade - dt * 1.6); }
+      const cv = $("#bcanvas"); if (cv) drawArena(run, cv);
+      if (run.winner && run.endAnim > 2.4) { finishFight(run); return; }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
   async function startBattle() {
     if (B.lineup.length < 2) return;
-    try { state.tts?.stop?.(); } catch {}
     const run = makeRun();
     if (run.fighters.length < 2) return;
-    B.run = run; B.stage = "fight";
+    B.run = run; B.stage = "fight"; run.ticker = "Dyrene gør sig klar…";
     renderBattle();
-    $("#battle").scrollIntoView({ block: "nearest" });
-    let text = null;
-    if (state.sample) {
-      run.ctl = new AbortController();
-      try {
-        const r = await state.sample(battlePrompt(run), { cache: false, signal: run.ctl.signal, onText: ({ text: t }) => applyStory(run, t) });
-        text = r.text;
-      } catch (e) {
-        if (B.run !== run) return;
-        if (e?.code === "cancelled") { B.stage = "pick"; B.run = null; renderBattle(); return; }
-        run.note = e?.code === "rate_limited" ? "AI'en har travlt, så denne kamp er simuleret uden AI" : "AI'en svarede ikke, så denne kamp er simuleret uden AI";
-      }
-    } else run.note = "simuleret uden AI";
+    $("#battle").scrollIntoView({ block: "start" });
+    await ensureSpecials(run.fighters);
     if (B.run !== run) return;
-    if (text === null) {
-      // Reveal the local story a block at a time, so it still feels like a live commentary.
-      run.local = true;
-      Object.assign(run, { text: "", blocks: [], outs: [], winner: null }); for (const f of run.fighters) f.out = false;
-      renderBattle();
-      const parts = localStory(run).split("\n\n");
-      let acc = "";
-      for (const part of parts) {
-        await new Promise(res => setTimeout(res, reducedMotion() ? 0 : 1100));
-        if (B.run !== run) return;
-        acc += (acc ? "\n\n" : "") + part;
-        applyStory(run, acc);
-      }
-      text = acc;
-    }
-    finishFight(run, text);
+    renderBattle();
+    const home = run.fighters.filter(f => f.home).map(f => f.name);
+    say(run, home.length ? `Hjemmebane for ${home.join(" og ")}. Kamp!` : `${run.fighters.length} dyr, alle mod alle. Kamp!`);
+    fxText(run, run.W / 2, run.H / 2, "KAMP!", "#ffe35a", 110, 1.1);
+    if (reducedMotion()) skipFight(run); else battleLoop(run);
   }
 
   function recordBattle(won, giant, key) {
@@ -2773,18 +2930,13 @@ Format (følg det præcist):
       B.lineup.push(pool[Math.floor(Math.random() * pool.length)]); renderBattle();
     }
     else if (act === "start" || act === "rematch") startBattle();
-    else if (act === "stop") { const run = B.run; if (run?.ctl && !run.local) run.ctl.abort(); else { B.run = null; B.stage = "pick"; renderBattle(); } try { state.tts?.stop?.(); } catch {} }
-    else if (act === "new") { B.run = null; B.stage = "pick"; try { state.tts?.stop?.(); } catch {} renderBattle(); }
-    else if (act === "read" && B.run) { B.run.spoken = 0; try { state.tts?.stop?.(); } catch {} speakBlocks(B.run, B.run.blocks.length); }
-    else if (act === "copy" && B.run) {
-      const txt = B.run.blocks.map(b => b.h ? `\n${b.t.toUpperCase()}` : b.t).join("\n").trim();
-      navigator.clipboard.writeText(txt).then(() => toast("Historien er kopieret"), () => toast("Kunne ikke kopiere. Markér teksten og kopiér selv."));
-    }
+    else if (act === "stop" || act === "new") { B.run = null; B.stage = "pick"; renderBattle(); }
+    else if (act === "skip") skipFight(B.run);
+    else if (act === "speed" && B.run) { B.run.speed = B.run.speed >= 4 ? 1 : B.run.speed * 2; ab.textContent = `Hastighed ${B.run.speed}x`; }
   });
   $("#battle").addEventListener("change", e => {
     if (e.target.matches("[data-bsel]")) { B.browse = e.target.value; renderBattle(); }
     if (e.target.id === "barena") B.arena = e.target.value;
-    if (e.target.id === "bspeak") { B.speak = e.target.checked; if (B.speak && B.run) B.run.spoken = Math.max(0, B.run.blocks.length - 1); }
   });
   document.addEventListener("paste", e => {
     const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
