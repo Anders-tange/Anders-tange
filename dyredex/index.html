@@ -175,20 +175,34 @@
   .v-mode button[aria-pressed="true"] { background: var(--lcd-ink); color: var(--lcd); }
   .card-stage { display: grid; place-items: center; padding: 4px 0 2px; touch-action: pan-y; }
   .pcard {
-    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; --int: 0; --holo: .5; --ox: 50%; --oy: 40%;
+    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; --int: 0; --holo: .5; --px: 0px; --py: 0px;
     width: min(100%, 330px); position: relative; border-radius: 16px; padding: 9px;
-    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)); transform-origin: var(--ox) var(--oy); transform-style: preserve-3d;
+    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; cursor: pointer;
     background: linear-gradient(145deg, #f7da74, #e3b23c 35%, #fbeaa8 55%, #d49c22);
     box-shadow: 0 12px 26px rgb(0 0 0 / .32), inset 0 0 0 1px rgb(0 0 0 / .15); color: #1b1d21;
   }
-  .pc-body { background: #fbf8ec; border-radius: 10px; padding: 8px; display: grid; gap: 6px; transform-style: preserve-3d; position: relative; }
+  .pc-body { background: #fbf8ec; border-radius: 10px; padding: 8px; display: grid; gap: 6px; transform-style: preserve-3d; position: relative; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .pc-body > .pc-top, .pc-body > .pc-meta { transform: translateZ(16px); }
+  .pc-back { position: absolute; inset: 9px; background: #fbf8ec; border-radius: 10px; padding: 10px; display: grid; gap: 8px; align-content: start; overflow-y: auto;
+    transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden; font-size: 13px; line-height: 1.45; }
+  .pc-back h4 { margin: 0; font-family: var(--font-display); font-size: 17px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .pc-back h4 span { font-family: var(--font-lcd); font-weight: 400; color: #6b6a5e; }
+  .pc-back .statpanel { grid-template-columns: 124px minmax(0, 1fr); }
+  .pc-back .power .kk { font-size: 34px; }
+  .pc-back p { margin: 0; }
+  .pc-back dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; }
+  .pc-back dt { font-family: var(--font-lcd); font-size: 16px; color: #6b6a5e; }
+  .pc-back dd { margin: 0; }
   .pc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; background: var(--c, #555); color: #fff; border-radius: 6px; padding: 3px 9px; }
   .pc-top b { font-family: var(--font-display); font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pc-top span { font-family: var(--font-lcd); font-size: 18px; flex: none; }
-  .pc-art { position: relative; aspect-ratio: 4 / 3; max-width: 100%; transform-style: preserve-3d; border-radius: 6px; box-shadow: 0 0 0 3px #d9b452; }
-  .pc-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 6px; display: block; }
-  .pc-pop { position: absolute; inset: 0; transform: translateZ(36px) scale(.9615); filter: drop-shadow(0 10px 10px rgb(0 0 0 / .4)); pointer-events: none; }
-  .pc-pop .mask { position: absolute; inset: 0; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+  /* The photo sits behind its frame like a window: it is a little larger than the opening and slides against the tilt. */
+  .pc-art { position: relative; aspect-ratio: 4 / 3; max-width: 100%; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 3px #d9b452, inset 0 0 14px rgb(0 0 0 / .45); }
+  .pc-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.16) translate(var(--px), var(--py)); }
+  .pc-art::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 16px rgb(0 0 0 / .5); pointer-events: none; }
+  .pc-spark { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: calc(.06 + var(--int) * .6);
+    background-image: radial-gradient(circle, #fff 0 1px, transparent 1.6px), radial-gradient(circle, #fff 0 1.4px, transparent 2.2px), radial-gradient(circle, #ffe9a6 0 1px, transparent 1.8px);
+    background-size: 67px 71px, 97px 89px, 131px 113px; background-position: var(--mx) var(--my), calc(100% - var(--mx)) var(--my), var(--my) var(--mx); }
   .pc-foil, .pc-glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
   .pc-foil {
     mix-blend-mode: color-dodge; opacity: calc(var(--holo) * (.05 + var(--int) * .34));
@@ -830,7 +844,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
-    viewCard: false, outlineJobs: new Map(),
+    viewCard: false,
     me: null, viewing: null, mine: [], players: new Map(), names: new Map(), unsubOther: null, user: null, tts: null,
   };
   const importKeys = new Set(), importSigs = new Set();
@@ -1046,7 +1060,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
         ${state.vision && !running ? `<button class="btn blue sm" data-act="refine">Bestem præcis art</button>` : ""}
         ${state.confirmDel ? `<button class="btn sm" data-act="del-yes">Slet billedet</button><button class="btn ghost sm" data-act="del-no">Behold</button>` : `<button class="btn ghost sm" data-act="del">Slet billede</button>`}
       </div>` : ""}`;
-    if (state.viewCard) mountCard(p);
+    if (state.viewCard) mountCard();
   }
 
   function statPanel(e, sp) {
@@ -1084,7 +1098,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
   }
 
   function select(key, scroll) {
-    state.selected = key; state.photoIdx = 0; state.confirmDel = false;
+    state.selected = key; state.photoIdx = 0; state.confirmDel = false; CARD.flip = false;
     if (state.refine && state.refine.status !== "running") state.refine = null;
     for (const t of document.querySelectorAll(".tile.sel")) t.classList.remove("sel");
     document.querySelector(`.tile[data-key="${CSS.escape(key)}"]`)?.classList.add("sel");
@@ -1096,100 +1110,55 @@ Sydkaper|Eubalaena australis|m|🐋`,
     }
   }
 
-  /* ---------- holo card: the real photo as a foil trading card; the animal sits on its own layer ---------- */
-  const CARD = { rx: 0, ry: 0, tx: 0, ty: 0, active: false, raf: 0, tilt: null, tiltSeen: false };
+  /* ---------- holo card: the real photo as a foil trading card that tilts, and flips to show its back ---------- */
+  const CARD = { rx: 0, ry: 0, tx: 0, ty: 0, active: false, raf: 0, tilt: null, tiltSeen: false, flip: false, flipCur: 0, down: null };
   const HOLO = { almindelig: .45, "usædvanlig": .6, "sjælden": .78, episk: .92, legendarisk: 1.05 };
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Outline points come as [[x, y], …] (0–1, from the top left). Stored flat to keep the document simple.
-  function cleanOutline(list) {
-    if (!Array.isArray(list)) return null;
-    const flat = list.flatMap(pt => Array.isArray(pt) ? pt.slice(0, 2) : (pt && typeof pt === "object" ? [pt.x, pt.y] : [pt]));
-    const out = [];
-    for (let i = 0; i + 1 < flat.length && out.length < 128; i += 2) {
-      const x = Number(flat[i]), y = Number(flat[i + 1]);
-      if (Number.isFinite(x) && Number.isFinite(y)) out.push(+Math.max(0, Math.min(1, x)).toFixed(4), +Math.max(0, Math.min(1, y)).toFixed(4));
-    }
-    return out.length >= 12 ? out : null;
-  }
-
-  const OUTLINE_PROMPT = `Find det dyr, der er hovedmotivet på billedet, og tegn dets omrids som en polygon.
-Giv 20-40 punkter [x, y] i billedkoordinater fra 0 til 1, hvor [0, 0] er øverst til venstre og [1, 1] nederst til højre.
-Gå med uret rundt tæt langs dyrets kant, og tag ben, hale, ører, horn, næb og vinger med. Hvis dyret er delvist skjult, så følg kun den synlige del.
-Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
-
-  async function findOutline(p) {
-    if (state.outlineJobs.get(p.id)?.status === "running") return;
-    state.outlineJobs.set(p.id, { status: "running" });
-    renderViewer();
-    try {
-      const blob = await fetch(photoSrc(p)).then(r => { if (!r.ok) throw { code: "fetch" }; return r.blob(); }, () => { throw { code: "fetch" }; });
-      const r = await state.sample.json(OUTLINE_PROMPT, { images: [blob], cache: false });
-      const outline = cleanOutline(r?.outline);
-      if (!outline) throw { code: "bad_outline" };
-      if (!state.memory) await state.db.collection(sightPath(state.me)).doc(p.id).update({ outline });
-      p.outline = outline;
-      state.outlineJobs.delete(p.id);
-    } catch (err) {
-      if (DISABLED.includes(err?.code)) state.vision = false;
-      state.outlineJobs.set(p.id, { status: "error", error: err?.code === "fetch" ? "Billedet kunne ikke hentes." : err?.code === "bad_outline" ? "AI'en fandt ikke et brugbart omrids. Prøv igen." : aiError(err?.code) });
-    }
-    renderViewer();
-  }
-
   function cardHtml(e, p) {
-    const i = e.sp.info;
+    const i = e.sp.info, sp = e.sp;
     const c = (CAT[e.cat] || CAT.andet).c;
-    const job = state.outlineJobs.get(p.id);
     const src = esc(photoSrc(p));
-    let hint = `Træk over kortet for at vippe det${CARD.tiltSeen ? ", eller vip telefonen" : ""}.`;
-    if (job?.status === "running") hint = "Finder dyrets omrids, så det kan poppe ud af kortet…";
-    else if (job?.status === "error") hint = `${esc(job.error)} <button class="btn ghost sm" data-act="outline">Prøv igen</button>`;
-    else if (!p.outline && state.vision && (state.memory || state.assets) && isMine()) hint += ` <button class="btn ghost sm" data-act="outline">Lad dyret poppe ud</button>`;
-    else if (p.outline && state.vision && (state.memory || state.assets) && isMine()) hint += ` <button class="btn ghost sm" data-act="outline">Find omrids igen</button>`;
+    const pw = speciesPower(sp, state.viewing);
+    const sparkle = p.shiny || rIdx(i.rarity) >= 3;
     return `<div class="card-stage" id="cstage">
       <div class="pcard" id="pcard" style="--c:${c};--holo:${p.shiny ? 1.3 : (HOLO[i.rarity] ?? .5)}">
         <div class="pc-body">
           <div class="pc-top"><b>${esc(e.name)}</b><span>No.${pad(e.no)}</span></div>
-          <div class="pc-art" id="pcart">
-            <img src="${src}" alt="${esc(e.name)}" id="pcbg">
-            ${p.outline ? `<div class="pc-pop"><div class="mask" id="pcmask"><img src="${src}" alt=""></div></div>` : ""}
+          <div class="pc-art">
+            <img src="${src}" alt="${esc(e.name)}">
+            ${sparkle ? '<div class="pc-spark"></div>' : ""}
             <div class="pc-foil"></div><div class="pc-glare"></div>
           </div>
           <div class="pc-meta"><span class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}</span>${rarityHtml(i.rarity)}</div>
-          <div class="pc-meta"><b class="lcdfont" style="font-size:18px">KK ${speciesPower(e.sp, state.viewing).kk} · LV ${speciesPower(e.sp, state.viewing).level}</b>${p.shiny ? `<b style="color:#b0179b">✨ SHINY</b>` : ""}</div>
+          <div class="pc-meta"><b class="lcdfont" style="font-size:18px">KK ${pw.kk} · LV ${pw.level}</b>${p.shiny ? `<b style="color:#b0179b">✨ SHINY</b>` : ""}</div>
           ${e.latin ? `<div class="pc-meta"><i>${esc(e.latin)}</i></div>` : ""}
           ${i.description ? `<p class="pc-desc">${esc(i.description)}</p>` : ""}
           ${i.stats ? `<div class="pc-stats">${STATS.map(([k, label]) => `<span>${label}<span class="bar"><i style="width:${clamp(i.stats[k], 0, 10) * 10}%"></i></span></span>`).join("")}</div>` : ""}
           <div class="pc-foot"><span>${esc(e.region ? REGION[e.region].label.toUpperCase() : "")}</span><span>DYREDEX</span></div>
         </div>
+        <div class="pc-back">
+          <h4>${esc(e.name)}<span>No.${pad(e.no)}</span></h4>
+          ${i.stats ? statPanel(e, sp).replace('<span class="spec">Flere billeder og sejre giver XP og højere level.</span>', "") : ""}
+          <div class="pc-meta"><span>${rarityHtml(i.rarity, true)}</span>${iucnHtml(i.iucn)}</div>
+          ${i.rarityWhy ? `<p>${esc(i.rarityWhy)}</p>` : ""}
+          ${i.funFact ? `<p><b>Vidste du?</b> ${esc(i.funFact)}</p>` : ""}
+          <dl>
+            <dt>Fundet</dt><dd>${esc(fmtDate(p.takenAt || p.createdAt))}${p.place ? `, ${esc(p.place)}` : ""}</dd>
+            ${i.size ? `<dt>Størrelse</dt><dd>${esc(i.size)}</dd>` : ""}
+            ${i.habitat ? `<dt>Levested</dt><dd>${esc(i.habitat)}</dd>` : ""}
+            <dt>Træner</dt><dd>${esc(trainerName(state.viewing))}</dd>
+          </dl>
+        </div>
         <div class="pc-foil"></div><div class="pc-glare"></div>
       </div>
     </div>
-    <p class="small dim" id="card-hint">${hint}</p>`;
+    <p class="small dim" id="card-hint">Træk over kortet for at vippe det${CARD.tiltSeen ? ", eller vip telefonen" : ""}. <button class="btn ghost sm" data-act="flip">Vend kortet</button></p>`;
   }
 
-  // Maps outline points (relative to the whole photo) onto the cropped art window and builds a soft-edged mask.
-  function fitMask(p) {
-    const art = $("#pcart"), bg = $("#pcbg"), mask = $("#pcmask");
-    if (!art || !bg || !mask || !p.outline || !bg.naturalWidth) return;
-    const w = art.clientWidth, h = art.clientHeight, iw = bg.naturalWidth, ih = bg.naturalHeight;
-    const sc = Math.max(w / iw, h / ih), dw = iw * sc, dh = ih * sc, ox = (w - dw) / 2, oy = (h - dh) / 2;
-    const pts = [];
-    for (let k = 0; k + 1 < p.outline.length; k += 2) pts.push(`${((ox + p.outline[k] * dw) / w).toFixed(4)},${((oy + p.outline[k + 1] * dh) / h).toFixed(4)}`);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1" preserveAspectRatio="none"><filter id="f" x="-.1" y="-.1" width="1.2" height="1.2"><feGaussianBlur stdDeviation=".006"/></filter><polygon points="${pts.join(" ")}" fill="#fff" filter="url(#f)"/></svg>`;
-    const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    mask.style.webkitMaskImage = url; mask.style.maskImage = url;
-  }
-
-  function mountCard(p) {
-    const stage = $("#cstage"), card = $("#pcard"), art = $("#pcart");
+  function mountCard() {
+    const stage = $("#cstage"), card = $("#pcard");
     if (!stage || !card) return;
-    // Tilt around the photo window so the raised animal lines up with the photo when the card is flat.
-    const cr = card.getBoundingClientRect(), ar = art.getBoundingClientRect();
-    if (cr.width) { card.style.setProperty("--ox", `${(ar.left + ar.width / 2 - cr.left) / cr.width * 100}%`); card.style.setProperty("--oy", `${(ar.top + ar.height / 2 - cr.top) / cr.height * 100}%`); }
-    const bg = $("#pcbg");
-    if (bg.complete) fitMask(p); else bg.addEventListener("load", () => fitMask(p), { once: true });
     const move = ev => {
       const r = card.getBoundingClientRect();
       CARD.tx = Math.max(-1, Math.min(1, ((ev.clientX - r.left) / r.width) * 2 - 1));
@@ -1197,9 +1166,15 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
       CARD.active = true;
     };
     stage.addEventListener("pointermove", move);
-    stage.addEventListener("pointerdown", move);
+    stage.addEventListener("pointerdown", ev => { move(ev); CARD.down = { x: ev.clientX, y: ev.clientY, t: performance.now() }; });
     const stop = () => { CARD.active = false; };
-    stage.addEventListener("pointerleave", stop); stage.addEventListener("pointercancel", stop); stage.addEventListener("pointerup", ev => { if (ev.pointerType !== "mouse") stop(); });
+    stage.addEventListener("pointerleave", stop); stage.addEventListener("pointercancel", stop);
+    // A short tap that barely moved turns the card over; a drag only tilts it.
+    stage.addEventListener("pointerup", ev => {
+      const d = CARD.down; CARD.down = null;
+      if (ev.pointerType !== "mouse") stop();
+      if (d && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) < 8 && performance.now() - d.t < 450 && ev.target.closest("#pcard")) CARD.flip = !CARD.flip;
+    });
     if (!CARD.raf) CARD.raf = requestAnimationFrame(cardLoop);
   }
 
@@ -1212,8 +1187,12 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
     else if (!CARD.active) { if (reducedMotion()) { tx = 0; ty = 0; } else { tx = Math.sin(t / 1500) * .45; ty = Math.cos(t / 2100) * .3; } }
     CARD.ry += (tx - CARD.ry) * .12;
     CARD.rx += (ty - CARD.rx) * .12;
-    el.style.setProperty("--ry", `${(CARD.ry * 16).toFixed(2)}deg`);
+    const target = CARD.flip ? 180 : 0;
+    CARD.flipCur = reducedMotion() || Math.abs(target - CARD.flipCur) < 0.5 ? target : CARD.flipCur + (target - CARD.flipCur) * .16;
+    el.style.setProperty("--ry", `${(CARD.ry * 16 + CARD.flipCur).toFixed(2)}deg`);
     el.style.setProperty("--rx", `${(-CARD.rx * 12).toFixed(2)}deg`);
+    el.style.setProperty("--px", `${(-CARD.ry * 5).toFixed(2)}%`);
+    el.style.setProperty("--py", `${(-CARD.rx * 4).toFixed(2)}%`);
     el.style.setProperty("--mx", `${(50 + CARD.ry * 45).toFixed(1)}%`);
     el.style.setProperty("--my", `${(50 + CARD.rx * 45).toFixed(1)}%`);
     el.style.setProperty("--int", Math.min(1, Math.hypot(CARD.rx, CARD.ry) * 1.2).toFixed(3));
@@ -1228,7 +1207,6 @@ Svar KUN med JSON: {"outline": [[0.42, 0.18], [0.47, 0.17], ...]}`;
   function askTilt() {
     try { if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch {}
   }
-  window.addEventListener("resize", () => { const e = entryByKey(state.selected); const p = e?.sp?.photos[state.photoIdx]; if (state.viewCard && p) fitMask(p); });
 
   /* ---------- achievements ---------- */
   const genusOf = latin => String(latin || "").trim().split(/\s+/)[0].toLowerCase();
@@ -1523,7 +1501,6 @@ Svar KUN med ét JSON-objekt i præcis dette format:
   "funFact": "1 overraskende fakta på dansk",
   "size": "typisk størrelse/vægt, kort",
   "habitat": "hvor det lever, kort",
-  "outline": omridset af dyret som 20-40 punkter [x, y] i billedkoordinater fra 0 til 1 ([0, 0] er øverst til venstre), med uret rundt tæt langs kanten inkl. ben, hale, ører og horn,
   "place": ${geo ? `"kort stednavn ud fra koordinaterne, fx 'Dyrehaven, Klampenborg, Danmark'"` : `""`},
   "stats": {"fart": 1-10, "styrke": 1-10, "snilde": 1-10, "nuttethed": 1-10}
 }
@@ -1551,7 +1528,6 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       notReal: r.isReal === false, fake: String(r.fake || "").trim(),
       rarityWhy: String(r.rarityWhy || "").trim(), iucn: IUCN[r.iucn] ? r.iucn : "",
       shiny: r.shiny === true, variant: r.shiny === true ? String(r.variant || "").trim() : "",
-      outline: cleanOutline(r.outline),
     };
     const cat = CATALOG_BY_KEY.get(keyFor(d));
     if (cat) Object.assign(d, { name: cat.name, latin: cat.latin, region: cat.region, category: cat.cat });
@@ -1807,7 +1783,6 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       description: d.description || "", funFact: d.funFact || "", size: d.size || "", habitat: d.habitat || "",
       idTips: d.idTips || "", stats: d.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
       rarityWhy: d.rarityWhy || "", iucn: d.iucn || "", shiny: !!d.shiny, variant: d.variant || "",
-      ...(d.outline ? { outline: d.outline } : {}),
       ...extra,
     };
   }
@@ -2595,7 +2570,7 @@ Format (følg det præcist):
       if (state.viewCard) askTilt();
       renderViewer(); return;
     }
-    if (act === "outline") { const p = entry?.sp?.photos[state.photoIdx]; if (p) { state.outlineJobs.delete(p.id); findOutline(p); } return; }
+    if (act === "flip") { CARD.flip = !CARD.flip; return; }
     if (act === "pick") pick();
     else if (act === "speak" && state.tts && entry?.sp) { const i = entry.sp.info; state.tts.speak(`${entry.name}. ${i.description || ""} ${i.funFact || ""}`).catch(() => {}); }
     else if (act === "reveal") { state.revealed.add(entry.key); store.set("dyredex-revealed", [...state.revealed].join(",")); renderViewer(); renderDex(); }
