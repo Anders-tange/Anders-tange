@@ -16,6 +16,9 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 - **Shiny-varianter:** Fotograferer du et individ med en usædvanlig farvevariant (albino, bleg/leucistisk, sort/melanistisk), markeres billedet med ✨, holo-kortet glimter ekstra, og det giver bonus-XP og badges.
 - **Stats, level og kampkraft:** Hvert dyr har et radar-diagram over fart, styrke, snilde og nuttethed med karakterer fra S til D. Billeder, sejre, sjældenhed og shiny giver XP og level, og Kampkraft (KK) samler det i ét tal. Gitteret kan sorteres efter nummer, kampkraft, sjældenhed, level eller nyeste.
 - **Dagens missioner:** Tre nye missioner hver dag (fx "Fang en fugl", "Tag 3 dyrebilleder", "Vind 2 kampe"), de samme for alle trænere. Klarer du alle tre, tæller det med i din streak og i badges.
+- **Rejse-dexer:** "+ Rejse-dex" laver en ekstra dex for et land, en ø eller et naturområde. AI'en finder omkring 40 arter, man realistisk kan møde dér, og de vises som silhuetter med egen fremgang og egne medaljer. Arter, du allerede har fanget dér, kommer med, så bonusdyr falder på plads. Siden foreslår selv en rejse-dex, når mange fund ligger uden for kataloget, ud fra landet i fundenes stednavne. Rejse-dexer gemmes i `dexes` og deles af alle trænere.
+- **Opdatér samlingen:** Ældre fund mangler de nyere oplysninger. Ét tryk lader AI'en give alle arter sjældenhed i fem niveauer, rødlistestatus, forklaring og region i ét samlet kald (uden billeder), og markerer shiny, hvis den gamle beskrivelse tydeligt nævner en farvevariant.
+- **Usikre fund:** Dyr, som AI'en var under 60 % sikker på eller kun bestemte til slægt eller familie, får et "?"-mærke og kan findes med filteret "Usikre". Du kan køre et grundigere tjek eller selv bekræfte arten.
 - **Kun ægte dyr:** AI'en tjekker først, om det er et ægte dyr. Statuer, figurer, legetøj, tegninger, udstoppede dyr og dyr på skærme eller skilte kan ikke registreres (album-importen springer dem over). Tager AI'en fejl, kan du trykke "Det er et ægte dyr".
 - **Holo-kort:** Tryk "HOLO-KORT" på et fanget dyr for at se dit foto som et samlekort med regnbue-glimmer, der er stærkere jo sjældnere dyret er. Kortet vipper, når du trækker over det, og fotoet ligger bag rammen som i et vindue, så det forskyder sig mod vippet og giver dybde. Tryk på kortet for at vende det: bagsiden viser radar, kampkraft, level, sjældenhed, rødlistestatus, fakta og hvor dyret blev fundet.
 - **Flere trænere:** Hver person har sin egen Dyredex under `players/<id>/`. Fanen "Trænere" viser en rangliste med arter, billeder, badges og sejre, og du kan kigge i de andres samlinger (kun læse). Venner inviteres ved at dele siden med deres e-mail som Editor; de skal kunne uploade billeder. Ejerens gamle samling flyttes automatisk ind under ejerens egen trænerprofil første gang den nye version åbnes.
@@ -31,9 +34,9 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 
 | Funktion | Bruges til |
 | --- | --- |
-| `sample` (med billeder) | AI-genkendelse, den grundige artsbestemmelse og kampfortællingen |
+| `sample` (med billeder) | AI-genkendelse, grundig artsbestemmelse, kampfortælling, rejse-dexer og opdatering af samlingen |
 | `assets` | Gemmer billederne |
-| `db` | Trænere (`players`) og hver træners fund (`players/<id>/sightings`) |
+| `db` | Trænere (`players`), hver træners fund (`players/<id>/sightings`) og rejse-dexer (`dexes`) |
 | `user` | Hvem der kigger, så hver træner får sin egen samling og sit navn på ranglisten |
 | `tts` | Oplæsning af dyretekster og kampe |
 

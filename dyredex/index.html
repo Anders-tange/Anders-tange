@@ -366,6 +366,14 @@
   .tile.caught.shiny::after { background-image: linear-gradient(115deg, transparent 30%, rgb(255 140 230 / .5) 42%, rgb(140 220 255 / .5) 52%, transparent 64%); }
   .tile.caught.sel, .tile.sel { box-shadow: inset 0 -4px 0 var(--bezel-lo), 0 0 0 3px var(--yellow); }
   @keyframes shimmer { from { background-position: 160% 0; } to { background-position: -160% 0; } }
+  .key.add { background: transparent; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .55); border-style: none; }
+  .key.add span { opacity: .8; }
+  .key.trip { background: #0f7a6c; box-shadow: inset 0 -4px 0 #084a41, inset 0 0 0 1px rgb(255 255 255 / .12); }
+  .key.trip .m { background: #084a41; }
+  .key.trip[aria-pressed="true"] { background: var(--yellow); box-shadow: inset 0 -4px 0 #b48a12; }
+  .tile .unsure { position: absolute; left: 3px; top: 3px; width: 17px; height: 17px; border-radius: 50%; background: #e06a1a; color: #fff; font-family: var(--font-lcd); font-size: 16px; line-height: 17px; text-align: center; }
+  .care { display: grid; gap: 10px; }
+  .care .meter { background: #dddcd3; } .care .meter i { background: var(--case); }
   .missions { background: var(--strip); color: var(--strip-ink); border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 0 0 3px var(--case-lo); display: grid; gap: 6px; font-family: var(--font-lcd); font-size: 19px; }
   .missions .mh { display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
   .missions ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -570,6 +578,7 @@
         <div class="battle" id="battle" hidden></div>
         <div class="trainers-view" id="trainers" hidden style="display:grid;gap:10px"></div>
         <div id="view-dex" style="display:grid;gap:14px">
+        <div class="care" id="care" hidden></div>
         <div class="missions" id="missions" hidden></div>
         <div class="keys" id="keys" role="group" aria-label="Vælg region"></div>
         <div class="stripbar" id="strip"></div>
@@ -578,6 +587,7 @@
             <button data-show="alle" aria-pressed="true">Alle</button>
             <button data-show="fanget" aria-pressed="false">Fanget</button>
             <button data-show="mangler" aria-pressed="false">Mangler</button>
+            <button data-show="usikre" aria-pressed="false">Usikre</button>
           </div>
           <div class="search"><input id="q" type="search" placeholder="Søg navn eller latin…" aria-label="Søg"></div>
           <select id="sort" aria-label="Sortér"><option value="nr">Nummer</option><option value="kk">Kampkraft</option><option value="rarity">Sjældenhed</option><option value="lv">Level</option><option value="recent">Nyeste</option></select>
@@ -829,12 +839,31 @@ Europæisk hummer|Homarus gammarus|c|🦞
 Almindelig søstjerne|Asterias rubens|o|⭐
 Sydkaper|Eubalaena australis|m|🐋`,
   };
-  const CATALOG = [];
+  const BASE_CATALOG = [];
   for (const r of REGIONS) for (const line of RAW[r.id].trim().split("\n")) {
     const [name, latin, c, emoji] = line.split("|").map(s => s.trim());
-    CATALOG.push({ no: CATALOG.length + 1, key: keyFor({ latin }), name, latin, cat: CODE[c] || "andet", emoji, region: r.id });
+    BASE_CATALOG.push({ no: BASE_CATALOG.length + 1, key: keyFor({ latin }), name, latin, cat: CODE[c] || "andet", emoji, region: r.id });
   }
-  const CATALOG_BY_KEY = new Map(CATALOG.map(c => [c.key, c]));
+  // Travel dexes add their species after the built-in catalogue, so CATALOG is rebuilt whenever they change.
+  let CATALOG = BASE_CATALOG.slice();
+  let CATALOG_BY_KEY = new Map(CATALOG.map(c => [c.key, c]));
+  let dexKeySets = new Map();
+  const ANIMAL_EMOJI = "🐒🦍🦧🐕🐺🦊🦝🐈🦁🐅🐆🐎🦓🦌🦬🐂🐃🐄🐖🐗🐏🐑🐐🐪🐫🦙🦒🐘🦏🦛🐁🐀🐹🐇🐿️🦫🦔🦇🐻🐨🐼🦥🦦🦨🦘🦡🦃🐔🐓🐦🐧🕊️🦅🦆🦢🦉🦤🦩🦚🦜🐸🐊🐢🦎🐍🐋🐳🐬🦭🐟🐠🐡🦈🐙🐚🐌🦋🐛🐜🐝🪲🐞🦗🪳🕷️🦂🦟🪰🪱🦀🦞🦐🦑";
+  const CAT_EMOJI = { pattedyr: "🐕", fugl: "🐦", krybdyr: "🦎", padde: "🐸", fisk: "🐟", insekt: "🪲", edderkoppedyr: "🕷️", bloeddyr: "🐌", krebsdyr: "🦀", andet: "🐛" };
+  function rebuildCatalog() {
+    CATALOG = BASE_CATALOG.slice();
+    const seen = new Set(CATALOG.map(c => c.key));
+    for (const d of state.dexes) for (const sp of d.species || []) {
+      if (!sp.key || seen.has(sp.key)) continue;
+      seen.add(sp.key);
+      CATALOG.push({ no: CATALOG.length + 1, key: sp.key, name: sp.name, latin: sp.latin, cat: CAT[sp.cat] ? sp.cat : "andet", emoji: sp.emoji || CAT_EMOJI[sp.cat] || "🐛", region: REGION[sp.region] ? sp.region : "", extra: true });
+    }
+    CATALOG_BY_KEY = new Map(CATALOG.map(c => [c.key, c]));
+    dexKeySets = new Map(state.dexes.map(d => [d.id, new Set((d.species || []).map(sp => sp.key))]));
+  }
+  const dexOf = r => String(r).startsWith("x:") ? state.dexes.find(d => d.id === r.slice(2)) : null;
+  const inRegion = (e, r) => r === "alle" || (String(r).startsWith("x:") ? !!dexKeySets.get(r.slice(2))?.has(e.key) : e.region === r);
+  const regionLabel = r => r === "alle" ? "Nationaldex" : dexOf(r)?.name || REGION[r]?.label || "";
 
   /* ---------- state ---------- */
   const state = {
@@ -844,7 +873,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
-    viewCard: false,
+    viewCard: false, dexes: [], dexForm: null, refresh: null, confirmDex: false,
     me: null, viewing: null, mine: [], players: new Map(), names: new Map(), unsubOther: null, user: null, tts: null,
   };
   const importKeys = new Set(), importSigs = new Set();
@@ -887,6 +916,9 @@ Sydkaper|Eubalaena australis|m|🐋`,
   const entryByKey = key => DEX.find(e => e.key === key);
   const photoSrc = s => s.assetId ? "/_blob/" + s.assetId : (memUrls.get(s.id) || "");
   const thumbSrc = s => s?.thumbId ? "/_blob/" + s.thumbId : photoSrc(s || {});
+  const photoVague = (p, key) => ["slægt", "familie"].includes(p.specificity) || (!p.specificity && !CATALOG_BY_KEY.has(key) && !/\s/.test(String(p.latin || "").trim()));
+  const photoUnsure = (p, key) => photoVague(p, key) || (typeof p.confidence === "number" && p.confidence < 0.6);
+  const spUnsure = sp => sp.photos.every(p => photoUnsure(p, sp.key));
   const nameShown = e => !!e.sp || state.showNames || state.revealed.has(e.key);
   // What a sighting will look like in the dex, worked out before the store has echoed it back.
   function previewEntry(doc) {
@@ -898,8 +930,8 @@ Sydkaper|Eubalaena australis|m|🐋`,
   function visibleEntries() {
     const q = state.q.trim().toLowerCase();
     const list = DEX.filter(e =>
-      (state.region === "alle" || e.region === state.region) &&
-      (state.show === "alle" || (state.show === "fanget" ? !!e.sp : !e.sp)) &&
+      inRegion(e, state.region) &&
+      (state.show === "alle" || (state.show === "fanget" ? !!e.sp : state.show === "usikre" ? !!e.sp && spUnsure(e.sp) : !e.sp)) &&
       (!q || [e.name, e.latin].some(v => String(v || "").toLowerCase().includes(q))));
     if (state.sort === "nr") return list;
     const val = e => {
@@ -954,13 +986,14 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   function render() {
     cmMemo = null;
+    if (String(state.region).startsWith("x:") && !dexOf(state.region)) state.region = "alle";
     DEX = buildDex();
     if (state.pendingSelect && entryByKey(state.pendingSelect)) { state.selected = state.pendingSelect; state.pendingSelect = null; state.photoIdx = 0; }
     if (!state.selected || !entryByKey(state.selected)) state.selected = (DEX.find(e => e.sp) || DEX[0]).key;
     renderCounter(); renderKeys(); renderStrip(); renderDex(); renderViewer();
     const ach = allAch();
     renderBadges(ach); checkBadges(ach); updateSummary(ach);
-    renderViewing(); renderMissions();
+    renderViewing(); renderMissions(); renderCare();
     if (document.activeElement?.id !== "nick") renderTrainers();
     if (B.stage === "pick") renderBattle();
   }
@@ -979,15 +1012,19 @@ Sydkaper|Eubalaena australis|m|🐋`,
       const pct = list.length ? got / list.length * 100 : 0;
       return `<button class="key" data-region="${id}" aria-pressed="${state.region === id}"><b>${esc(label)}</b><span>${got}/${list.length}</span><span class="m"><i style="width:${pct}%"></i></span></button>`;
     };
-    $("#keys").innerHTML = key("alle", "Nationaldex", DEX) + REGIONS.map(r => key(r.id, r.label, DEX.filter(e => e.region === r.id))).join("");
+    $("#keys").innerHTML = key("alle", "Nationaldex", DEX) + REGIONS.map(r => key(r.id, r.label, DEX.filter(e => e.region === r.id))).join("")
+      + state.dexes.map(d => key("x:" + d.id, d.name, DEX.filter(e => inRegion(e, "x:" + d.id))).replace('class="key"', 'class="key trip"')).join("")
+      + (state.sample && isMine() ? `<button class="key add" data-dexadd="1"><b>+ Rejse-dex</b><span>NYT STED</span></button>` : "");
   }
 
   function renderStrip() {
-    const list = state.region === "alle" ? DEX : DEX.filter(e => e.region === state.region);
+    const list = DEX.filter(e => inRegion(e, state.region));
     const got = list.filter(e => e.sp).length;
     const pct = list.length ? Math.round(got / list.length * 100) : 0;
-    const name = state.region === "alle" ? "NATIONALDEX" : REGION[state.region].label.toUpperCase();
-    $("#strip").innerHTML = `<span>${esc(name)}</span><span>${got} FANGET</span><span class="meter"><i style="width:${pct}%"></i></span><span>${list.length - got} TILBAGE · ${pct}%</span>`;
+    const name = regionLabel(state.region).toUpperCase();
+    const dex = dexOf(state.region);
+    const del = dex && dex.by === state.me && isMine() ? (state.confirmDex ? `<button class="btn sm" data-dexdel="yes">Slet rejse-dex</button><button class="btn ghost-dark sm" data-dexdel="no">Behold</button>` : `<button class="btn ghost-dark sm" data-dexdel="ask">Slet</button>`) : "";
+    $("#strip").innerHTML = `<span>${esc(name)}</span><span>${got} FANGET</span><span class="meter"><i style="width:${pct}%"></i></span><span>${list.length - got} TILBAGE · ${pct}%</span>${del}`;
   }
 
   function tileHtml(e) {
@@ -998,7 +1035,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     const r = caught ? e.sp.info.rarity : "";
     return `<button class="tile${caught ? ` caught r-${rIdx(r)}` : ""}${pw?.shiny ? " shiny" : ""}${state.selected === e.key ? " sel" : ""}" data-key="${esc(e.key)}" aria-label="${esc(label)}${pw ? `, ${RARITY_LABEL[r] || ""}, kampkraft ${pw.kk}` : ""}" ${caught ? `style="--rc:${RARITY_COLOR[r] || "transparent"}"` : ""}>
       <span class="no">${pad(e.no)}</span>${caught ? '<span class="ball" aria-hidden="true"></span>' : ""}${e.bonus ? '<span class="bonus-tag" aria-hidden="true">B</span>' : ""}
-      <span class="art">${caught ? `<img src="${esc(thumbSrc(e.sp.photos[0]))}" alt="" loading="lazy" decoding="async"><span class="kkb">KK ${pw.kk}</span>${pw.shiny ? '<span class="shn" aria-hidden="true">✨</span>' : ""}` : `<span class="sil" aria-hidden="true">${e.emoji}</span>`}</span>
+      <span class="art">${caught && spUnsure(e.sp) ? '<span class="unsure" title="Usikker bestemmelse" aria-hidden="true">?</span>' : ""}${caught ? `<img src="${esc(thumbSrc(e.sp.photos[0]))}" alt="" loading="lazy" decoding="async"><span class="kkb">KK ${pw.kk}</span>${pw.shiny ? '<span class="shn" aria-hidden="true">✨</span>' : ""}` : `<span class="sil" aria-hidden="true">${e.emoji}</span>`}</span>
       <span class="nm">${show ? esc(e.name) : "???"}</span>
     </button>`;
   }
@@ -1032,7 +1069,8 @@ Sydkaper|Eubalaena australis|m|🐋`,
     const p = sp.photos[state.photoIdx];
     const i = sp.info;
     const canEdit = (state.memory || !!state.assets) && isMine();
-    const vague = ["slægt", "familie"].includes(p.specificity) || (!p.specificity && !CATALOG_BY_KEY.has(e.key) && !/\s/.test(String(p.latin || "").trim()));
+    const vague = photoVague(p, e.key);
+    const shaky = !vague && photoUnsure(p, e.key);
     const mapLink = p.geo ? ` · <a href="https://www.openstreetmap.org/?mlat=${Number(p.geo.lat)}&amp;mlon=${Number(p.geo.lon)}#map=14/${Number(p.geo.lat)}/${Number(p.geo.lon)}" target="_blank" rel="noopener">kort</a>` : "";
     const running = state.refine && state.refine.sid === p.id;
     v.innerHTML = `${head}
@@ -1043,6 +1081,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
       <div class="chips">${catHtml(e.cat)}${(i.types || []).map(t => `<span class="type">${esc(t)}</span>`).join("")}${rarityHtml(i.rarity, true)}${iucnHtml(i.iucn)}</div>`}
       ${p.shiny ? `<p class="shinyline">✨ Shiny-variant${p.variant ? `: ${esc(p.variant)}` : ""}</p>` : ""}
       ${vague ? `<p class="small" style="color:var(--danger)">Kun bestemt til ${esc(p.specificity || "slægt eller familie")}. Tryk "Bestem præcis art".</p>` : ""}
+      ${shaky ? `<p class="small" style="color:var(--danger)">AI'en var kun ${Math.round(p.confidence * 100)} % sikker på arten.${canEdit ? ` Tryk "Bestem præcis art" for et grundigere tjek, eller <button class="btn ghost sm" data-act="confirm-id">Jeg er sikker</button>` : ""}</p>` : ""}
       ${i.description && !state.viewCard ? `<p class="small">${esc(i.description)}</p>` : ""}
       ${i.stats && !state.viewCard ? statPanel(e, sp) : ""}
       <dl class="facts">
@@ -1329,8 +1368,8 @@ Sydkaper|Eubalaena australis|m|🐋`,
       return { value, tiers: [items.length], items };
     }
     if (a.itemsFn) { const items = a.itemsFn(c); return { value: items.filter(x => x.done).length, tiers: [items.length], items }; }
-    if (a.region) {
-      const list = DEX.filter(e => e.region === a.region);
+    if (a.region || a.dexId) {
+      const list = DEX.filter(e => inRegion(e, a.dexId ? "x:" + a.dexId : a.region));
       const n = list.length;
       return { value: list.filter(e => e.sp).length, tiers: [Math.ceil(n * .25), Math.ceil(n * .5), n] };
     }
@@ -1339,7 +1378,10 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   function allAch() {
     const c = achContext();
-    return ACH.map(g => ({ group: g.group, list: g.list.map(a => { const r = evalAch(a, c); return { ...a, ...r, level: r.tiers.filter(t => r.value >= t).length }; }) }));
+    const groups = state.dexes.length
+      ? [...ACH.slice(0, 3), { group: "Rejse-dexer", list: state.dexes.map(d => ({ id: "dex-" + d.id, icon: "✈️", name: d.name, desc: "Fang 25 %, 50 % og alle rejse-dexens dyr.", dexId: d.id })) }, ...ACH.slice(3)]
+      : ACH;
+    return groups.map(g => ({ group: g.group, list: g.list.map(a => { const r = evalAch(a, c); return { ...a, ...r, level: r.tiers.filter(t => r.value >= t).length }; }) }));
   }
 
   function medalOf(a) {
@@ -1782,7 +1824,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       specificity: d.specificity || "", types: d.types || [], rarity: d.rarity || "almindelig",
       description: d.description || "", funFact: d.funFact || "", size: d.size || "", habitat: d.habitat || "",
       idTips: d.idTips || "", stats: d.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
-      rarityWhy: d.rarityWhy || "", iucn: d.iucn || "", shiny: !!d.shiny, variant: d.variant || "",
+      rarityWhy: d.rarityWhy || "", iucn: d.iucn || "", shiny: !!d.shiny, variant: d.variant || "", rv: 2,
       ...extra,
     };
   }
@@ -1907,6 +1949,167 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       toast(e.sp.photos.length > 1 ? "Billedet er slettet" : `${e.name} er ikke længere fanget`);
       render();
     } catch { toast("Billedet kunne ikke slettes. Prøv igen."); }
+  }
+
+  /* ---------- collection care: refresh old finds with the newer fields, and build travel dexes ---------- */
+  const staleSpecies = () => [...speciesOf(state.mine).values()].filter(sp => sp.photos.some(p => !p.rv));
+
+  function refreshPrompt(batch) {
+    return `Du opdaterer oplysninger om dyrearter i en "Dyredex" (en Pokédex for rigtige dyr). Vurdér hver art nedenfor.
+
+For hver art skal du give:
+- "rarity": en af ${JSON.stringify(RARITY)}: hvor sjældent arten ses i naturen på verdensplan (bestandens størrelse, hvor truet den er, og hvor sky og skjult den lever). "almindelig" = husdyr, kæledyr, byfugle og meget almindelige vilde arter; "usædvanlig" = vilde dyr man ser af og til; "sjælden" = sky, skjulte eller meget lokale arter; "episk" = truede arter eller dyr der er meget svære at opleve; "legendarisk" = kritisk truede arter eller dyr der næsten aldrig ses i naturen.
+- "rarityWhy": 1 kort sætning på dansk om hvorfor arten har den sjældenhed.
+- "iucn": IUCN-rødlistestatus, en af ["LC","NT","VU","EN","CR","EW","DD"] (tom streng for husdyr og kæledyr).
+- "region": en af ${JSON.stringify(REGIONS.map(r => r.id))} (hvor arten naturligt lever; "dk" hvis den lever vildt i Danmark, "hav" for havdyr og polardyr).
+- "shiny": true KUN hvis beskrivelsen af brugerens fund tydeligt siger, at netop dette individ havde en usædvanlig farvevariant (albino, leucistisk/bleg eller melanistisk/sort); ellers false.
+- "variant": hvis shiny, en kort beskrivelse af varianten; ellers tom streng.
+
+Arter (nøgle: navn (videnskabeligt navn). Beskrivelse af brugerens fund):
+${batch.map(sp => `- ${sp.key}: ${sp.info.name} (${sp.info.latin || "?"}). ${String(sp.info.description || "").slice(0, 240)}`).join("\n")}
+
+Svar KUN med ét JSON-objekt, hvor nøglerne er artsnøglerne: {"${batch[0].key}": {"rarity": "...", "rarityWhy": "...", "iucn": "...", "region": "...", "shiny": false, "variant": ""}}`;
+  }
+
+  async function refreshAll() {
+    if (state.refresh?.running || !state.sample) return;
+    const list = staleSpecies();
+    if (!list.length) return;
+    state.refresh = { running: true, done: 0, total: list.length, error: "" };
+    renderCare();
+    try {
+      for (let at = 0; at < list.length; at += 25) {
+        const batch = list.slice(at, at + 25);
+        const r = await state.sample.json(refreshPrompt(batch), { cache: false });
+        for (const sp of batch) {
+          const x = r?.[sp.key] || {};
+          const fields = { rv: 2 };
+          if (RARITY.includes(x.rarity)) fields.rarity = x.rarity;
+          if (x.rarityWhy) fields.rarityWhy = String(x.rarityWhy).trim().slice(0, 200);
+          fields.iucn = IUCN[x.iucn] ? x.iucn : "";
+          if (!CATALOG_BY_KEY.has(sp.key) && REGION[x.region]) fields.region = x.region;
+          for (const [n, ph] of sp.photos.entries()) {
+            const f = { ...fields };
+            if (n === 0 && x.shiny === true && !ph.shiny) Object.assign(f, { shiny: true, variant: String(x.variant || "").trim().slice(0, 80) });
+            if (state.db && !state.memory) await state.db.collection(sightPath(state.me)).doc(ph.id).update(f);
+            Object.assign(ph, f);
+          }
+          state.refresh.done++;
+        }
+        renderCare();
+      }
+      state.refresh = null;
+      toast("Samlingen er opdateret");
+    } catch (e) {
+      state.refresh = { running: false, done: 0, total: 0, error: e?.code ? aiError(e.code) : "Noget af samlingen kunne ikke gemmes. Prøv igen." };
+    }
+    render();
+  }
+
+  function dexPrompt(place) {
+    const mine = [...speciesOf(state.mine).values()].map(sp => `${sp.info.name} (${sp.info.latin || "?"})`).join("; ");
+    return `Lav en "rejse-dex" til en Dyredex (en Pokédex for rigtige dyr): en liste over 40 dyrearter, som en rejsende realistisk kan se og fotografere her: "${place.replace(/"/g, "'")}".
+
+Regler:
+- Kun vildtlevende arter, der faktisk forekommer dér. Præcise arter med videnskabeligt navn, aldrig grupper som "abe" eller "sommerfugl".
+- Bland ikoniske dyr, hverdagsdyr man møder i byer, haver, ved hoteller, templer og strande, og nogle få sjældne drømmefund.
+- Bland dyregrupper: pattedyr, fugle, krybdyr, padder, fisk, insekter, edderkoppedyr og andre smådyr.
+- Brugeren har allerede fanget disse arter. Tag dem med i listen med PRÆCIS samme videnskabelige navn, hvis de forekommer vildt i området: ${mine || "(ingen endnu)"}
+- Hvis en art står i dette katalog, så brug PRÆCIS samme navn og videnskabelige navn: ${BASE_CATALOG.map(c => `${c.name} (${c.latin})`).join("; ")}
+
+Svar KUN med JSON:
+{"name": "kort dansk navn på stedet, fx Indonesien", "species": [{"name": "dansk navn med stort forbogstav", "latin": "videnskabeligt navn", "cat": en af ${JSON.stringify(CATS.map(c => c.id))}, "region": en af ${JSON.stringify(REGIONS.map(r => r.id))} (verdensdelen arten lever i), "emoji": ét emoji fra denne liste, der ligner dyrets silhuet mest: ${ANIMAL_EMOJI}}]}
+Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": "", "species": []}.`;
+  }
+
+  function cleanDexSpecies(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [], seen = new Set();
+    for (const x of list.slice(0, 80)) {
+      const latin = String(x?.latin || "").trim(), name = String(x?.name || "").trim();
+      const key = keyFor({ latin });
+      if (!name || !/\s/.test(latin) || !key || seen.has(key)) continue;
+      seen.add(key);
+      const base = BASE_CATALOG.find(c => c.key === key);
+      const cat = CAT[x.cat] ? x.cat : "andet";
+      const emoji = String(x.emoji || "").trim();
+      out.push({ key, name: base ? base.name : name.slice(0, 48), latin: base ? base.latin : latin.slice(0, 60), cat: base ? base.cat : cat,
+        region: base ? base.region : (REGION[x.region] ? x.region : ""), emoji: base ? base.emoji : (emoji && ANIMAL_EMOJI.includes(emoji) ? emoji : CAT_EMOJI[cat]) });
+    }
+    return out.slice(0, 60);
+  }
+
+  async function createDex(place) {
+    place = String(place || "").trim().slice(0, 60);
+    if (!place || state.dexForm?.running || !state.sample) return;
+    state.dexForm = { open: true, running: true, place, error: "" };
+    renderCare();
+    try {
+      const r = await state.sample.json(dexPrompt(place), { cache: false });
+      const species = cleanDexSpecies(r?.species);
+      if (species.length < 8) throw { code: "bad_dex" };
+      const name = String(r.name || place).trim().slice(0, 40);
+      let id = slug(name) || "dex";
+      if (state.dexes.some(d => d.id === id)) id += "-" + Date.now().toString(36).slice(-4);
+      const doc = { name, place, by: state.me, createdAt: Date.now(), species };
+      if (state.db && !state.memory) await state.db.collection("dexes").doc(id).set(doc);
+      if (!state.dexes.some(d => d.id === id)) state.dexes.push({ id, ...doc });
+      rebuildCatalog();
+      state.dexForm = null; state.region = "x:" + id;
+      render();
+      const got = DEX.filter(e => inRegion(e, "x:" + id) && e.sp).length;
+      toast(`Rejse-dex ${name}: ${species.length} dyr, du har allerede ${got}`);
+    } catch (e) {
+      state.dexForm = { open: true, running: false, place, error: e?.code === "bad_dex" ? "AI'en kunne ikke lave en liste for det sted. Prøv et land, en ø eller et naturområde." : e?.code ? aiError(e.code) : "Rejse-dexen kunne ikke gemmes. Prøv igen." };
+      renderCare();
+    }
+  }
+
+  async function deleteDex(id) {
+    try { if (state.db && !state.memory) await state.db.collection("dexes").doc(id).delete(); }
+    catch { toast("Rejse-dexen kunne ikke slettes."); return; }
+    state.dexes = state.dexes.filter(d => d.id !== id);
+    state.confirmDex = false; state.region = "alle";
+    rebuildCatalog(); render();
+    toast("Rejse-dexen er slettet. Dine fund er der stadig.");
+  }
+
+  // Suggests a travel dex when many finds fall outside the catalogue, using the country in their place names.
+  function dexSuggestion() {
+    if (store.get("dyredex-nosuggest") === "1") return null;
+    const bonus = [...speciesOf(state.mine).values()].filter(sp => !CATALOG_BY_KEY.has(sp.key));
+    if (bonus.length < 5) return null;
+    const count = new Map();
+    for (const sp of bonus) {
+      const pl = String(sp.photos.find(ph => ph.place && !/^-?\d/.test(ph.place))?.place || "").split(",").pop().trim();
+      if (pl) count.set(pl, (count.get(pl) || 0) + 1);
+    }
+    const top = [...count].sort((a, b) => b[1] - a[1])[0];
+    const place = top && top[1] >= 3 ? top[0] : "";
+    if (place ? state.dexes.some(d => d.name.toLowerCase() === place.toLowerCase() || String(d.place || "").toLowerCase() === place.toLowerCase()) : state.dexes.some(d => d.by === state.me)) return null;
+    return { n: bonus.length, place };
+  }
+
+  function renderCare() {
+    const el = $("#care");
+    if (document.activeElement?.id === "dexplace" && !state.dexForm?.running) return;
+    if (!isMine() || !state.loaded || !state.sample) { el.hidden = true; return; }
+    const parts = [];
+    const f = state.dexForm;
+    if (f?.open) parts.push(`<div class="panel"><h3>Ny rejse-dex</h3>
+      ${f.running ? `<p class="lcdfont" style="font-size:20px">BYGGER REJSE-DEX FOR ${esc(f.place.toUpperCase())}…</p><p>AI'en finder 40 dyr, du kan møde dér. Det tager op til et minut.</p>`
+        : `<p>Skriv et land, en ø eller et naturområde, så laver AI'en en dex med 40 dyr, du kan finde dér. Dyr, du allerede har fanget dér, kommer med.</p>
+          <div class="row-flex"><input id="dexplace" maxlength="60" value="${esc(f.place)}" placeholder="Fx Indonesien, Bali, Kenya eller Mols Bjerge" style="flex:1 1 220px;min-width:0" aria-label="Sted"><button class="btn sm" data-care="dex-create">Opret</button><button class="btn ghost sm" data-care="dex-cancel">Annullér</button></div>
+          ${f.error ? `<p class="err">${esc(f.error)}</p>` : ""}`}</div>`);
+    const rf = state.refresh, stale = staleSpecies().length;
+    if (rf?.running) parts.push(`<div class="panel"><h3>Opdaterer samlingen</h3><p class="lcdfont" style="font-size:20px">${rf.done}/${rf.total} DYR</p><span class="meter"><i style="width:${rf.total ? rf.done / rf.total * 100 : 0}%"></i></span></div>`);
+    else if (stale) parts.push(`<div class="panel"><h3>Opdatér samlingen</h3><p>${stale} af dine dyr mangler de nyeste oplysninger: sjældenhed i fem niveauer, rødlistestatus og forklaringen på, hvorfor de er sjældne.</p>
+      ${rf?.error ? `<p class="err">${esc(rf.error)}</p>` : ""}<div><button class="btn sm" data-care="refresh">Opdatér ${stale} dyr</button></div></div>`);
+    const sg = !f?.open && dexSuggestion();
+    if (sg) parts.push(`<div class="panel"><h3>Lav en rejse-dex</h3><p>${sg.n} af dine dyr er uden for kataloget${sg.place ? `, og de fleste er fra ${esc(sg.place)}` : ""}. En rejse-dex giver dig silhuetter for de dyr, der lever dér, og dine fund falder på plads i den.</p>
+      <div class="row-flex">${sg.place ? `<button class="btn sm" data-care="suggest" data-place="${esc(sg.place)}">Opret rejse-dex for ${esc(sg.place)}</button>` : ""}<button class="btn ${sg.place ? "ghost" : ""} sm" data-care="suggest-other">${sg.place ? "Andet sted" : "Vælg sted"}</button><button class="btn ghost sm" data-care="nosuggest">Nej tak</button></div></div>`);
+    el.hidden = !parts.length;
+    el.innerHTML = parts.join("");
   }
 
   /* ---------- daily missions: three per day, the same for everyone, picked from the date ---------- */
@@ -2539,7 +2742,28 @@ Format (følg det præcist):
     if (act === "imp-close") { state.import = null; renderTrayHead(); }
   });
 
-  $("#keys").addEventListener("click", e => { const b = e.target.closest("[data-region]"); if (!b) return; state.region = b.dataset.region; render(); });
+  $("#keys").addEventListener("click", e => {
+    if (e.target.closest("[data-dexadd]")) { state.dexForm = { open: true, running: false, place: "", error: "" }; renderCare(); $("#dexplace")?.focus(); return; }
+    const b = e.target.closest("[data-region]"); if (!b) return;
+    state.region = b.dataset.region; state.confirmDex = false; render();
+  });
+  $("#strip").addEventListener("click", e => {
+    const b = e.target.closest("[data-dexdel]"); if (!b) return;
+    if (b.dataset.dexdel === "ask") { state.confirmDex = true; renderStrip(); }
+    else if (b.dataset.dexdel === "no") { state.confirmDex = false; renderStrip(); }
+    else deleteDex(state.region.slice(2));
+  });
+  $("#care").addEventListener("click", e => {
+    const b = e.target.closest("[data-care]"); if (!b) return;
+    const act = b.dataset.care;
+    if (act === "refresh") refreshAll();
+    else if (act === "dex-create") createDex($("#dexplace")?.value);
+    else if (act === "dex-cancel") { state.dexForm = null; renderCare(); }
+    else if (act === "suggest") createDex(b.dataset.place);
+    else if (act === "suggest-other") { state.dexForm = { open: true, running: false, place: "", error: "" }; renderCare(); $("#dexplace")?.focus(); }
+    else if (act === "nosuggest") { store.set("dyredex-nosuggest", "1"); renderCare(); }
+  });
+  $("#care").addEventListener("keydown", e => { if (e.target.id === "dexplace" && e.key === "Enter") createDex(e.target.value); });
   document.querySelector(".seg").addEventListener("click", e => {
     const b = e.target.closest("[data-show]"); if (!b) return;
     state.show = b.dataset.show;
@@ -2571,6 +2795,12 @@ Format (følg det præcist):
       renderViewer(); return;
     }
     if (act === "flip") { CARD.flip = !CARD.flip; return; }
+    if (act === "confirm-id") {
+      const ph = entry?.sp?.photos[state.photoIdx]; if (!ph) return;
+      ph.confidence = 1; ph.confirmed = true;
+      if (state.db && !state.memory) state.db.collection(sightPath(state.me)).doc(ph.id).update({ confidence: 1, confirmed: true }).catch(() => toast("Kunne ikke gemme."));
+      render(); return;
+    }
     if (act === "pick") pick();
     else if (act === "speak" && state.tts && entry?.sp) { const i = entry.sp.info; state.tts.speak(`${entry.name}. ${i.description || ""} ${i.funFact || ""}`).catch(() => {}); }
     else if (act === "reveal") { state.revealed.add(entry.key); store.set("dyredex-revealed", [...state.revealed].join(",")); renderViewer(); renderDex(); }
@@ -2619,6 +2849,10 @@ Format (følg det præcist):
         renderViewing(); if (document.activeElement?.id !== "nick") renderTrainers();
         if (B.stage === "pick") renderBattle();
         if (isMine() && state.loaded) { const ach = allAch(); renderBadges(ach); checkBadges(ach); }
+      }, () => {});
+      db.collection("dexes").onSnapshot(snap => {
+        state.dexes = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.name && Array.isArray(d.species)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        rebuildCatalog(); render();
       }, () => {});
       let first = true;
       db.collection(sightPath(me)).orderBy("createdAt", "asc").onSnapshot(snap => {
