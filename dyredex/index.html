@@ -434,7 +434,6 @@
   .tr-name { font-weight: 600; overflow-wrap: anywhere; }
   .tr-stats { font-family: var(--font-lcd); font-size: 16px; color: var(--tile-dim); display: flex; gap: 4px 12px; flex-wrap: wrap; }
   .btn.ink { background: var(--tile-ink); box-shadow: none; }
-  @media (max-width: 520px) { .tabs button { font-size: 12px; padding: 8px 4px; letter-spacing: .02em; } }
 
   /* ---------- battle: pick a line-up, then a narrated fight ---------- */
   .battle { display: grid; gap: 12px; }
@@ -483,19 +482,62 @@
   .b-result p { margin: 0; font-size: 14px; color: #fff; }
   .bctl { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-  /* ---------- phone: the selected animal opens as a sheet; scan buttons float at the bottom ---------- */
-  .sheet-close, .fab { display: none; }
+  /* ---------- phone: bottom navigation with a centre SCAN button, compact header, the selected animal as a sheet ---------- */
+  .sheet-close, .bnav, .scansheet { display: none; }
+  .missions .mh { all: unset; display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; cursor: pointer; box-sizing: border-box; width: 100%; }
+  .missions .mh:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   @media (max-width: 880px) {
+    .outer { padding-top: 8px; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+    .tabs { display: none; }
+    .top { padding: 10px 14px 12px; gap: 10px; flex-wrap: nowrap; }
+    .lens { width: 40px; height: 40px; border-width: 4px; }
+    .leds, .brand p, .counter .lbl { display: none; }
+    .brand h1 { font-size: 22px; }
+    .counter { margin-left: auto; width: auto; min-width: 96px; padding: 5px 10px; gap: 3px; }
+    .counter .big { font-size: 22px; } .counter .big small { font-size: 16px; }
+    .right { padding: 12px; gap: 12px; }
+    .keys { display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; margin-inline: -12px; padding-inline: 12px; scroll-snap-type: x proximity; }
+    .keys::-webkit-scrollbar { display: none; }
+    .key { flex: none; min-width: 124px; scroll-snap-align: start; scroll-margin-left: 12px; }
+    .tools .search { flex: 1 1 140px; }
+    .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+    .stripbar { font-size: 19px; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
+    .stripbar > span:first-child, .missions .w { display: none; }
+    .stripbar .meter { flex: 1 1 40px; min-width: 30px; }
+    .missions .mh { flex-wrap: nowrap; white-space: nowrap; }
+
     .left { display: none; position: fixed; inset: 0; z-index: 30; overflow-y: auto; background: var(--case); border-bottom: 0;
       padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
     body.sheet .left { display: block; }
     body.sheet { overflow: hidden; }
-    .sheet-close { display: inline-flex; margin-bottom: 10px; }
-    .fab { display: flex; position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; gap: 10px; justify-content: center;
-      padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-      background: linear-gradient(transparent, rgb(0 0 0 / .6) 45%); }
-    .fab .btn { flex: 1; max-width: 220px; padding: 13px; font-size: 16px; }
-    .outer { padding-bottom: 96px; }
+    .sheet-close { display: inline-flex; margin-bottom: 10px; position: sticky; top: 0; z-index: 3; box-shadow: 0 0 0 3px var(--case); }
+    .left .album { display: none; }
+
+    .bnav { display: grid; grid-template-columns: 1fr 1fr 80px 1fr 1fr; align-items: center; position: fixed; z-index: 20; left: 0; right: 0; bottom: 0;
+      background: #14161a; border-top: 3px solid var(--case-lo);
+      padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+    .bnav button { border: 0; background: transparent; color: #c3c6cd; font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; min-height: 48px; cursor: pointer; border-radius: 10px; padding: 0 2px; }
+    .bnav button[aria-selected="true"] { color: #14161a; background: var(--yellow); }
+    .bnav .scan { display: grid; place-items: center; line-height: 1; padding: 0; width: 70px; height: 70px; margin: -28px auto 0; border-radius: 50%; background: var(--case); color: #fff; font-size: 15px; box-shadow: 0 0 0 5px #14161a, inset 0 -5px 0 var(--case-lo); }
+    .bnav .scan:active { transform: translateY(2px); }
+    .bnav .scan:disabled { opacity: .5; }
+
+    .scansheet:not([hidden]) { display: grid; position: fixed; inset: 0; z-index: 35; background: rgb(8 10 14 / .7); align-items: end; }
+    .ss-panel { background: var(--strip); color: #fff; border-radius: 18px 18px 0 0; display: grid; gap: 10px;
+      padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .ss-panel h3 { font-family: var(--font-display); font-size: 20px; }
+    .ss-panel .btn { padding: 14px; font-size: 16px; }
+    .ss-panel p { margin: 0; font-size: 13px; opacity: .85; }
+    .ss-panel .place { margin-top: 4px; }
+  }
+  /* Fingers need bigger targets than a mouse, and 16px inputs stop iOS from zooming in on focus. */
+  @media (pointer: coarse) {
+    .btn.sm, .seg button, .v-mode button, .alts button { min-height: 40px; }
+    .btn.sm { padding-inline: 14px; }
+    .toggle { min-height: 40px; } .toggle input { width: 22px; height: 22px; }
+    .b-chip .acts button { width: 40px; height: 40px; }
+    input, select { font-size: 16px; min-height: 44px; }
+    .toggle input { min-height: 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -590,7 +632,7 @@
             <button data-show="usikre" aria-pressed="false">Usikre</button>
           </div>
           <div class="search"><input id="q" type="search" placeholder="Søg navn eller latin…" aria-label="Søg"></div>
-          <select id="sort" aria-label="Sortér"><option value="nr">Nummer</option><option value="kk">Kampkraft</option><option value="rarity">Sjældenhed</option><option value="lv">Level</option><option value="recent">Nyeste</option></select>
+          <select id="sort" aria-label="Sortér"><option value="mine">Fanget først</option><option value="nr">Nummer</option><option value="kk">Kampkraft</option><option value="rarity">Sjældenhed</option><option value="lv">Level</option><option value="recent">Nyeste</option></select>
           <label class="toggle"><input type="checkbox" id="shownames"> Vis navne</label>
         </div>
         <div class="dex" id="dex"></div>
@@ -600,7 +642,23 @@
   </div>
 </div>
 
-<div class="fab" id="fab"><button class="btn" id="fabscan">SCAN</button><button class="btn blue" id="fabalbum">Fotoalbum</button></div>
+<nav class="bnav" id="bnav" aria-label="Navigation">
+  <button data-tab="dex" aria-selected="true">Dyredex</button>
+  <button data-tab="battle" aria-selected="false">Battle</button>
+  <button class="scan" id="navscan" aria-label="Scan et dyr">SCAN</button>
+  <button data-tab="badges" aria-selected="false">Badges</button>
+  <button data-tab="trainers" aria-selected="false">Trænere</button>
+</nav>
+<div class="scansheet" id="scansheet" hidden>
+  <div class="ss-panel" role="dialog" aria-modal="true" aria-label="Tilføj dyr">
+    <h3>Tilføj dyr</h3>
+    <button class="btn" id="sheetscan">Tag eller vælg billeder</button>
+    <button class="btn blue" id="sheetalbum">Importér fotoalbum</button>
+    <p>Fotoalbum: vælg mange billeder på én gang. Nye arter registreres automatisk, og dyr du allerede har, springes over.</p>
+    <div id="ss-place"></div>
+    <button class="btn ghost-dark" id="sheetcancel">Luk</button>
+  </div>
+</div>
 <div id="unlock-root"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -867,7 +925,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
 
   /* ---------- state ---------- */
   const state = {
-    sightings: [], queue: [], region: "alle", show: "alle", q: "", sort: "nr",
+    sightings: [], queue: [], region: "alle", show: "alle", q: "", sort: "mine",
     showNames: store.get("dyredex-names") === "1",
     revealed: new Set((store.get("dyredex-revealed") || "").split(",").filter(Boolean)),
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
@@ -934,6 +992,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
       (state.show === "alle" || (state.show === "fanget" ? !!e.sp : state.show === "usikre" ? !!e.sp && spUnsure(e.sp) : !e.sp)) &&
       (!q || [e.name, e.latin].some(v => String(v || "").toLowerCase().includes(q))));
     if (state.sort === "nr") return list;
+    if (state.sort === "mine") return [...list].sort((a, b) => (!!b.sp - !!a.sp) || a.no - b.no);
     const val = e => {
       if (!e.sp) return -1;
       if (state.sort === "rarity") return rIdx(e.sp.info.rarity) * 10 + (e.sp.photos.some(p => p.shiny) ? 5 : 0);
@@ -1012,9 +1071,11 @@ Sydkaper|Eubalaena australis|m|🐋`,
       const pct = list.length ? got / list.length * 100 : 0;
       return `<button class="key" data-region="${id}" aria-pressed="${state.region === id}"><b>${esc(label)}</b><span>${got}/${list.length}</span><span class="m"><i style="width:${pct}%"></i></span></button>`;
     };
-    $("#keys").innerHTML = key("alle", "Nationaldex", DEX) + REGIONS.map(r => key(r.id, r.label, DEX.filter(e => e.region === r.id))).join("")
+    const keysEl = $("#keys"), keysScroll = keysEl.scrollLeft;
+    keysEl.innerHTML = key("alle", "Nationaldex", DEX) + REGIONS.map(r => key(r.id, r.label, DEX.filter(e => e.region === r.id))).join("")
       + state.dexes.map(d => key("x:" + d.id, d.name, DEX.filter(e => inRegion(e, "x:" + d.id))).replace('class="key"', 'class="key trip"')).join("")
       + (state.sample && isMine() ? `<button class="key add" data-dexadd="1"><b>+ Rejse-dex</b><span>NYT STED</span></button>` : "");
+    keysEl.scrollLeft = keysScroll;
   }
 
   function renderStrip() {
@@ -1136,13 +1197,28 @@ Sydkaper|Eubalaena australis|m|🐋`,
     </div>`;
   }
 
+  const isPhone = () => matchMedia("(max-width: 880px)").matches;
+  let sheetHash = false;
+  function openSheet() {
+    document.body.classList.add("sheet"); $(".left").scrollTop = 0;
+    try { if (location.hash !== "#dyr") { location.hash = "dyr"; sheetHash = true; } } catch {}
+  }
+  function closeSheet() {
+    if (!document.body.classList.contains("sheet")) return;
+    document.body.classList.remove("sheet");
+    try { if (sheetHash && location.hash === "#dyr") history.back(); } catch {}
+    sheetHash = false;
+  }
+  // The phone's back button or gesture closes the open animal instead of leaving the app.
+  window.addEventListener("hashchange", () => { if (location.hash !== "#dyr") { sheetHash = false; document.body.classList.remove("sheet"); } });
+
   function select(key, scroll) {
     state.selected = key; state.photoIdx = 0; state.confirmDel = false; CARD.flip = false;
     if (state.refine && state.refine.status !== "running") state.refine = null;
     for (const t of document.querySelectorAll(".tile.sel")) t.classList.remove("sel");
     document.querySelector(`.tile[data-key="${CSS.escape(key)}"]`)?.classList.add("sel");
     renderViewer();
-    if (scroll && matchMedia("(max-width: 880px)").matches) { document.body.classList.add("sheet"); $(".left").scrollTop = 0; return; }
+    if (scroll && isPhone()) { openSheet(); return; }
     if (scroll) {
       const r = $("#viewer").getBoundingClientRect();
       if (r.top < 0 || r.top > innerHeight * 0.6) $("#viewer").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -1700,7 +1776,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
 
   function addFiles(files, auto) {
     ensureMine();
-    document.body.classList.remove("sheet");
+    closeSheet();
     if (!state.canAdd) { toast("Kun ejeren af denne Dyredex kan registrere dyr"); return; }
     const imgs = [...files].filter(f => f && /^image\//.test(f.type || ""));
     if (!imgs.length) { toast("Vælg et billede (JPG, PNG, WebP eller GIF)"); return; }
@@ -2103,10 +2179,10 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
           ${f.error ? `<p class="err">${esc(f.error)}</p>` : ""}`}</div>`);
     const rf = state.refresh, stale = staleSpecies().length;
     if (rf?.running) parts.push(`<div class="panel"><h3>Opdaterer samlingen</h3><p class="lcdfont" style="font-size:20px">${rf.done}/${rf.total} DYR</p><span class="meter"><i style="width:${rf.total ? rf.done / rf.total * 100 : 0}%"></i></span></div>`);
-    else if (stale) parts.push(`<div class="panel"><h3>Opdatér samlingen</h3><p>${stale} af dine dyr mangler de nyeste oplysninger: sjældenhed i fem niveauer, rødlistestatus og forklaringen på, hvorfor de er sjældne.</p>
+    else if (stale) parts.push(`<div class="panel"><h3>Opdatér samlingen</h3><p>${stale} af dine dyr mangler ny sjældenhed og rødlistestatus.</p>
       ${rf?.error ? `<p class="err">${esc(rf.error)}</p>` : ""}<div><button class="btn sm" data-care="refresh">Opdatér ${stale} dyr</button></div></div>`);
     const sg = !f?.open && dexSuggestion();
-    if (sg) parts.push(`<div class="panel"><h3>Lav en rejse-dex</h3><p>${sg.n} af dine dyr er uden for kataloget${sg.place ? `, og de fleste er fra ${esc(sg.place)}` : ""}. En rejse-dex giver dig silhuetter for de dyr, der lever dér, og dine fund falder på plads i den.</p>
+    if (sg) parts.push(`<div class="panel"><h3>Lav en rejse-dex</h3><p>${sg.n} af dine dyr er uden for kataloget${sg.place ? `, og de fleste er fra ${esc(sg.place)}` : ""}. En rejse-dex viser de dyr, du kan finde dér.</p>
       <div class="row-flex">${sg.place ? `<button class="btn sm" data-care="suggest" data-place="${esc(sg.place)}">Opret rejse-dex for ${esc(sg.place)}</button>` : ""}<button class="btn ${sg.place ? "ghost" : ""} sm" data-care="suggest-other">${sg.place ? "Andet sted" : "Vælg sted"}</button><button class="btn ghost sm" data-care="nosuggest">Nej tak</button></div></div>`);
     el.hidden = !parts.length;
     el.innerHTML = parts.join("");
@@ -2180,8 +2256,9 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
     }
     const streak = streakOf(state.players.get(state.me)?.daily || []);
     el.hidden = false;
-    el.innerHTML = `<div class="mh"><span>DAGENS MISSIONER</span><span>${done ? '<span class="all">ALLE KLARET!</span>' : `${ms.filter(m => m.have >= m.goal).length}/3 KLARET`} · 🔥 ${streak} ${streak === 1 ? "DAG" : "DAGE"}</span></div>
-      <ul>${ms.map(m => `<li class="${m.have >= m.goal ? "done" : ""}"><span>${m.have >= m.goal ? "✓" : "○"}</span><span class="t">${esc(m.text)}</span><span>${m.have}/${m.goal}</span></li>`).join("")}</ul>`;
+    const open = (store.get("dyredex-missions") ?? (isPhone() ? "0" : "1")) === "1";
+    el.innerHTML = `<button class="mh" data-mtoggle="1" aria-expanded="${open}"><span>DAGENS MISSIONER ${open ? "▾" : "▸"}</span><span>${done ? '<span class="all">ALLE KLARET!</span>' : `${ms.filter(m => m.have >= m.goal).length}/3<span class="w"> KLARET</span>`} · 🔥 ${streak}<span class="w"> ${streak === 1 ? "DAG" : "DAGE"}</span></span></button>
+      <ul ${open ? "" : "hidden"}>${ms.map(m => `<li class="${m.have >= m.goal ? "done" : ""}"><span>${m.have >= m.goal ? "✓" : "○"}</span><span class="t">${esc(m.text)}</span><span>${m.have}/${m.goal}</span></li>`).join("")}</ul>`;
   }
 
   /* ---------- trainers: everyone keeps their own dex under players/<id>/ ---------- */
@@ -2205,8 +2282,10 @@ Hvis "${place.replace(/"/g, "'")}" ikke er et rigtigt sted, så svar {"name": ""
   }
 
   function setTab(tab) {
+    const changed = state.tab !== tab;
     state.tab = tab;
-    for (const x of document.querySelectorAll(".tabs button")) x.setAttribute("aria-selected", x.dataset.tab === tab);
+    for (const x of document.querySelectorAll(".tabs [data-tab], .bnav [data-tab]")) x.setAttribute("aria-selected", x.dataset.tab === tab);
+    if (changed && isPhone()) window.scrollTo(0, 0);
     $("#view-dex").hidden = tab !== "dex";
     $("#badges").hidden = tab !== "badges";
     $("#battle").hidden = tab !== "battle";
@@ -2650,9 +2729,20 @@ Format (følg det præcist):
   document.querySelector(".tabs").addEventListener("click", e => {
     const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab);
   });
-  $("#sheetclose").addEventListener("click", () => document.body.classList.remove("sheet"));
-  $("#fabscan").addEventListener("click", pick);
-  $("#fabalbum").addEventListener("click", () => { ensureMine(); $("#albumfile").click(); });
+  $("#sheetclose").addEventListener("click", closeSheet);
+  $("#bnav").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+  const scanSheet = open => { $("#scansheet").hidden = !open; if (open) $("#sheetscan").focus(); };
+  $("#navscan").addEventListener("click", () => scanSheet(true));
+  $("#sheetscan").addEventListener("click", () => { scanSheet(false); pick(); });
+  $("#sheetalbum").addEventListener("click", () => { scanSheet(false); ensureMine(); $("#albumfile").click(); });
+  $("#sheetcancel").addEventListener("click", () => scanSheet(false));
+  $("#scansheet").addEventListener("click", e => { if (e.target.id === "scansheet") scanSheet(false); });
+  $("#scansheet").addEventListener("keydown", e => { if (e.key === "Escape") scanSheet(false); });
+  // The "place for photos without GPS" field lives in the scan sheet on phones and beside the viewer on wider screens.
+  const placeEl = document.querySelector(".place"), phoneMq = matchMedia("(max-width: 880px)");
+  const placeHome = () => { if (phoneMq.matches) $("#ss-place").append(placeEl); else document.querySelector(".left .album").after(placeEl); };
+  placeHome();
+  phoneMq.addEventListener("change", () => { placeHome(); if (!phoneMq.matches) { scanSheet(false); closeSheet(); } });
   $("#helpok").addEventListener("click", () => { $("#help").hidden = true; store.set("dyredex-help", "1"); });
   $("#help").hidden = store.get("dyredex-help") === "1";
   $("#viewing").addEventListener("click", e => { if (e.target.closest("[data-tact='home']")) viewTrainer(state.me); });
@@ -2747,6 +2837,11 @@ Format (følg det præcist):
     const b = e.target.closest("[data-region]"); if (!b) return;
     state.region = b.dataset.region; state.confirmDex = false; render();
   });
+  $("#missions").addEventListener("click", e => {
+    if (!e.target.closest("[data-mtoggle]")) return;
+    const open = (store.get("dyredex-missions") ?? (isPhone() ? "0" : "1")) === "1";
+    store.set("dyredex-missions", open ? "0" : "1"); renderMissions();
+  });
   $("#strip").addEventListener("click", e => {
     const b = e.target.closest("[data-dexdel]"); if (!b) return;
     if (b.dataset.dexdel === "ask") { state.confirmDex = true; renderStrip(); }
@@ -2777,7 +2872,7 @@ Format (følg det præcist):
   $("#dex").addEventListener("click", e => { const t = e.target.closest(".tile"); if (t) select(t.dataset.key, true); });
   document.querySelector(".dpad").addEventListener("click", e => { const b = e.target.closest("[data-nav]"); if (b) nav(b.dataset.nav); });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && document.body.classList.contains("sheet") && !$("#unlock-root").firstChild) { document.body.classList.remove("sheet"); return; }
+    if (e.key === "Escape" && document.body.classList.contains("sheet") && !$("#unlock-root").firstChild) { closeSheet(); return; }
     if (e.target.closest("input, select, textarea") || $("#unlock-root").firstChild) return;
     const map = { ArrowLeft: "-1", ArrowRight: "1", ArrowUp: "-cols", ArrowDown: "cols" };
     if (map[e.key] && e.target.closest(".dex, .dpad")) { e.preventDefault(); nav(map[e.key]); }
@@ -2839,7 +2934,7 @@ Format (følg det præcist):
       render();
     } else {
       showNotice("");
-      if (!assets) { state.canAdd = false; for (const id of ["#scanbtn", "#albumbtn", "#fabscan", "#fabalbum"]) $(id).disabled = true; showNotice("Du kan se Dyredex'en og bruge Battle, men ikke scanne dyr. Bed ejeren om at dele siden med dig som Editor."); }
+      if (!assets) { state.canAdd = false; for (const id of ["#scanbtn", "#albumbtn", "#navscan"]) $(id).disabled = true; showNotice("Du kan se Dyredex'en og bruge Battle, men ikke scanne dyr. Bed ejeren om at dele siden med dig som Editor."); }
       else if (!state.vision) showNotice("AI-genkendelse er ikke tilgængelig her. Du kan stadig registrere dyr ved at skrive navnet selv.");
       if (user && await user.isOwner()) await migrateLegacy();
       joinPlayers();
