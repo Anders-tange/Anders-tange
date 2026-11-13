@@ -222,10 +222,9 @@ README), før regressionsdesignet låses.
 | Jer | Kør trin 1–6 i README, når login er modtaget | Ca. en halv dag |
 | Jer | Udfyld dækningstabellen og afgør go/no-go | Senest 3 uger efter ansøgning |
 
-Hvis CVR-adgangen trækker ud: Erhvervsstyrelsen har også åbne
-massedata-/tredjepartsløsninger, og regnskabsindekset er allerede åbent, men
-det giver ikke branchekode og hjemmeside. Der er ingen god erstatning for
-system-til-system-adgangen, så den er projektets reelle flaskehals.
+Hvis CVR-adgangen trækker ud, er der ingen god erstatning: regnskabsindekset
+er åbent, men indeholder hverken branchekode eller hjemmeside.
+System-til-system-adgangen er derfor projektets reelle flaskehals.
 
 ## Kilder
 - Erhvervsstyrelsen: [Kom godt igang med Elasticsearch](https://erhvervsstyrelsen.dk/kom-godt-igang-med-elasticSearch)
