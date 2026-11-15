@@ -107,6 +107,9 @@
     animation: sweep 1.6s linear infinite;
   }
   @keyframes sweep { from { top: -30%; } to { top: 100%; } }
+  .xthumbs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--lcd-dim); }
+  .xthumbs img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; display: block; }
+  .altwhy { margin: 0; font-size: 13px; color: var(--lcd-dim); }
   .scan-body { display: grid; gap: 8px; align-content: start; min-width: 0; }
   .status { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-family: var(--font-lcd); font-size: 19px; color: var(--lcd-dim); }
   .tag { padding: 0 8px; border-radius: 5px; color: #fff; }
@@ -275,7 +278,8 @@
   .dpad .l { grid-area: 2 / 1; border-radius: 5px 0 0 5px; } .dpad .r { grid-area: 2 / 3; border-radius: 0 5px 5px 0; }
   .dpad i { grid-area: 2 / 2; }
   .place { margin-top: 14px; display: grid; gap: 4px; font-size: 13px; }
-  .place input { width: 100%; padding: 7px 10px; border-radius: 7px; border: 0; background: var(--tile); color: var(--tile-ink); }
+  .place label + input { margin-bottom: 6px; }
+  .place input, .place select { width: 100%; padding: 7px 10px; border-radius: 7px; border: 0; background: var(--tile); color: var(--tile-ink); }
   #file, #albumfile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .album { margin-top: 14px; display: grid; gap: 6px; font-size: 13px; }
   .album p { margin: 0; opacity: .9; }
@@ -590,9 +594,12 @@
         <div class="place">
           <label for="default-place">Sted for billeder uden GPS</label>
           <input id="default-place" placeholder="Fx Dyrehaven, Klampenborg (valgfrit)" autocomplete="off">
+          <label for="setting">Hvor er dyrene fotograferet?</label>
+          <select id="setting"><option value="">Ved ikke / blandet</option><option value="vild">Vildt i naturen</option><option value="zoo">Zoo, akvarium eller dyrepark</option><option value="hjem">Kæledyr eller husdyr</option></select>
         </div>
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
         <input type="file" id="albumfile" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <input type="file" id="morefile" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
       </section>
 
       <section class="right" aria-label="Dyredex">
@@ -928,7 +935,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
     selected: null, pendingSelect: null, photoIdx: 0, confirmDel: false, refine: null,
     db: null, assets: null, sample: null, vision: false, canAdd: true, memory: false,
     tab: "dex", loaded: false, import: null, pendingBadges: [],
-    viewCard: false, specials: new Map(), dexes: [], dexForm: null, refresh: null, confirmDex: false,
+    viewCard: false, maxImages: 1, specials: new Map(), dexes: [], dexForm: null, refresh: null, confirmDex: false,
     me: null, viewing: null, mine: [], players: new Map(), names: new Map(), unsubOther: null, user: null, tts: null,
   };
   const importKeys = new Set(), importSigs = new Set();
@@ -1177,7 +1184,7 @@ Sydkaper|Eubalaena australis|m|🐋`,
   function refineHtml(p) {
     const r = state.refine;
     if (!r || r.sid !== p.id) return "";
-    if (r.status === "running") return `<div class="box"><span class="lcdfont" style="font-size:20px">ANALYSERER GRUNDIGT…</span><p class="small dim">AI'en kigger efter de kendetegn, der skiller nært beslægtede arter ad. Det kan tage op til et minut.</p><div class="actions"><button class="btn ghost sm" data-act="refine-stop">Stop</button></div></div>`;
+    if (r.status === "running") return `<div class="box"><span class="lcdfont" style="font-size:20px">ANALYSERER GRUNDIGT…</span><p class="small dim">AI'en zoomer ind på dyret og vejer de arter, der ligner hinanden, mod hinanden. Det kan tage op til et minut.</p><div class="actions"><button class="btn ghost sm" data-act="refine-stop">Stop</button></div></div>`;
     if (r.status === "error") return `<div class="box"><p class="err">${esc(r.error)}</p><div class="actions"><button class="btn ghost sm" data-act="refine-close">Luk</button></div></div>`;
     const d = r.draft;
     const same = keyFor(d) === p.key;
@@ -1571,29 +1578,76 @@ Sydkaper|Eubalaena australis|m|🐋`,
     } finally { URL.revokeObjectURL(url); }
   }
 
+  // The model sees every image scaled to about 1.2 megapixels, so a small animal in a wide photo is only a few pixels.
+  // Cutting the animal out of the full-resolution original gives it several times more detail to judge from.
+  function cleanBox(b) {
+    if (!Array.isArray(b) || b.length !== 4) return null;
+    const [x0, y0, x1, y1] = b.map(Number);
+    if (![x0, y0, x1, y1].every(v => Number.isFinite(v) && v >= -0.02 && v <= 1.02)) return null;
+    const box = [Math.max(0, x0), Math.max(0, y0), Math.min(1, x1), Math.min(1, y1)];
+    return box[2] - box[0] >= 0.03 && box[3] - box[1] >= 0.03 ? box.map(v => +v.toFixed(3)) : null;
+  }
+  const boxArea = b => (b[2] - b[0]) * (b[3] - b[1]);
+  async function cropBlob(src, box) {
+    const url = URL.createObjectURL(src);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("decode")); i.src = url; });
+      const W = img.naturalWidth, H = img.naturalHeight, pad = 0.2;
+      const bw = box[2] - box[0], bh = box[3] - box[1];
+      const x0 = Math.max(0, box[0] - bw * pad) * W, y0 = Math.max(0, box[1] - bh * pad) * H;
+      const x1 = Math.min(1, box[2] + bw * pad) * W, y1 = Math.min(1, box[3] + bh * pad) * H;
+      const sw = Math.max(16, x1 - x0), sh = Math.max(16, y1 - y0), sc = Math.min(1, 1280 / Math.max(sw, sh));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(sw * sc)); c.height = Math.max(1, Math.round(sh * sc));
+      c.getContext("2d").drawImage(img, x0, y0, sw, sh, 0, 0, c.width, c.height);
+      return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("encode")), "image/jpeg", 0.9));
+    } finally { URL.revokeObjectURL(url); }
+  }
+  // Older answers listed "alternatives"; newer ones list the candidates the model weighed, best first.
+  function normResult(r) {
+    if (r && typeof r === "object" && !Array.isArray(r.alternatives))
+      r.alternatives = (Array.isArray(r.candidates) ? r.candidates : []).filter(c => c && c.name && keyFor(c) !== keyFor(r)).slice(0, 3);
+    return r;
+  }
+  const needsCloser = d => !!d && !d.noAnimal && !d.notReal && !!d.name && ((d.confidence || 0) < 0.75 || ["slægt", "familie"].includes(d.specificity));
+  const SETTING_NOTE = {
+    vild: "Dyret er fotograferet vildt i naturen, så arten skal kunne forekomme vildt på stedet.",
+    zoo: "Dyret er fotograferet i en zoo, et akvarium eller en dyrepark. Se derfor bort fra, hvor billedet er taget: arten kan komme fra hele verden.",
+    hjem: "Det er et kæledyr eller husdyr. Angiv race, hvis den kan ses.",
+  };
+
   /* ---------- AI prompt ---------- */
-  function buildPrompt({ geo, takenAt, place, previous }) {
+  function buildPrompt({ geo, takenAt, place, previous, setting, images }) {
     const ctx = [];
-    if (geo) ctx.push(`Billedet er taget ved GPS-koordinaterne ${geo.lat}, ${geo.lon}.`);
-    else if (place) ctx.push(`Brugeren oplyser, at billedet er taget her: ${place}.`);
-    if (takenAt) ctx.push(`Det er taget ${fmtDate(takenAt)}, så tænk på årstiden.`);
+    if (setting !== "zoo") {
+      if (geo) ctx.push(`Billedet er taget ved GPS-koordinaterne ${geo.lat}, ${geo.lon}.`);
+      else if (place) ctx.push(`Brugeren oplyser, at billedet er taget her: ${place}.`);
+    }
+    if (takenAt) { const t = new Date(takenAt); ctx.push(`Det er taget ${fmtDate(takenAt)} kl. ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}, så tænk på årstiden og på, om dyret er dag- eller nataktivt.`); }
+    if (SETTING_NOTE[setting]) ctx.push(SETTING_NOTE[setting]);
+    const many = !!images && (images.length > 1 || images[0] !== "hele billedet");
     const catalog = CATALOG.map(c => `${c.name} (${c.latin})`).join("; ");
     const bonus = DEX.filter(e => e.bonus).map(e => `${e.name} (${e.latin || "?"})`).join("; ");
     return `Du er motoren i en "Dyredex": en Pokédex for rigtige dyr, som brugeren selv har fotograferet.
-Se på billedet og identificér det dyr, der er hovedmotivet. Husdyr, kæledyr og dyr i zoo og akvarier tæller også.
-
+Identificér det dyr, der er hovedmotivet. Husdyr, kæledyr og dyr i zoo og akvarier tæller også.
+${many ? `\nDu får ${images.length === 1 ? "ét billede" : `${images.length} billeder af SAMME dyr i denne rækkefølge`}: ${images.map((t, n) => `${n + 1}) ${t}`).join("; ")}. Brug nærbilleder til detaljerne og hele billedet til omgivelser og størrelse.\n` : ""}
 Tjek FØRST, om det er et ÆGTE dyr af kød og blod, fotograferet i virkeligheden. Det tæller IKKE som ægte:
 statuer, skulpturer, figurer, legetøj, bamser, kostumer, tegninger, malerier, graffiti, mosaikker, udstoppede dyr, skeletter, fossiler,
 og dyr der kun ses på en skærm, plakat, skilt, i en bog eller på et andet foto. Kig efter tegn som ens farve og overflade (sten, metal, plastik, træ, gips),
 en sokkel, mangel på pels- eller hudstruktur, unaturlige proportioner, stive poser og glasøjne. Er du i tvivl, så sæt "isReal" til false og forklar hvorfor.
 
-Vær så SPECIFIK som muligt. Bestem altid arten, og underart eller race hvis den kan ses (fx hunde-, katte-, heste- og hønseracer).
+Arbejd som en feltbiolog, i denne rækkefølge:
+1. Beskriv, hvad du faktisk kan se på dyret ("seen"). Gæt ikke på detaljer, du ikke kan se.
+2. Opstil de 2-3 mest sandsynlige arter ("candidates"), og skriv for hver, hvad der taler for og imod.
+3. Vælg den bedste. Bestem arten, og underart eller race hvis den kan ses (fx hunde-, katte-, heste- og hønseracer).
 Skriv aldrig bare en gruppe som "skorpion", "edderkop", "bille" eller "orangutang", hvis du kan vurdere den konkrete art.
-Er du i tvivl mellem nært beslægtede arter, så vælg den mest sandsynlige ud fra kendetegnene på billedet, stedet og årstiden, og læg de andre i "alternatives".
-Brug kun slægt eller familie, hvis billedet virkelig ikke gør det muligt at skelne.
-${ctx.length ? `\n${ctx.join(" ")}\nBrug sted og tidspunkt til at vurdere, hvilke arter der realistisk lever der, men stol mest på billedet: dyr i zoo, akvarier og hjem kan være eksotiske.\n` : ""}${previous ? `\nEt tidligere hurtigt bud var: ${previous.name} (${previous.latin || "?"}). Kig grundigt efter de kendetegn, der skiller nært beslægtede arter ad (farve, mønster, kropsform, proportioner, hale, klør, ben), og ret buddet, hvis det er forkert eller for upræcist.\n` : ""}
-Svar KUN med ét JSON-objekt i præcis dette format:
+Kan de kendetegn, der skiller arten fra dens nærmeste forvekslingsarter, ikke ses på billedet, så vælg den mest sandsynlige art, men sæt "confidence" lavt. Brug kun slægt eller familie, hvis billedet slet ikke gør det muligt at skelne.
+${ctx.length ? `\n${ctx.join(" ")}\n${setting === "zoo" ? "" : "Brug sted og tidspunkt til at vurdere, hvilke arter der realistisk lever der, men stol mest på billedet: dyr i zoo, akvarier og hjem kan være eksotiske.\n"}` : ""}${previous ? `\nEt første bud var: ${previous.name} (${previous.latin || "?"})${previous.cands ? `, med disse andre kandidater: ${previous.cands}` : ""}. Det bud var usikkert. Tjek nu grundigt de kendetegn, der skiller kandidaterne ad (farve, mønster, kropsform, proportioner, hale, klør, ben, følehorn), og ret buddet, hvis det er forkert eller for upræcist. Du må gerne ende på en helt anden art.\n` : ""}
+Svar KUN med ét JSON-objekt i præcis dette format og denne rækkefølge:
 {
+  "seen": "1-2 sætninger om hvad du konkret kan se: farver, mønstre, kropsform, ben, følehorn, hale og størrelsen i forhold til omgivelserne",
+  "candidates": de 2-3 mest sandsynlige arter, bedste først: [{"name": "dansk navn", "latin": "videnskabeligt navn", "for": "kendetegn på billedet der taler for", "against": "hvad der taler imod, eller hvad man skulle kunne se for at være sikker"}],
+  "box": [x0, y0, x1, y1] for en ramme tæt omkring dyret i ${many && images.length > 1 ? `billede nr. ${Math.max(1, images.indexOf("hele billedet") + 1)}` : "billedet"}, som tal fra 0 til 1, hvor [0, 0] er øverste venstre hjørne,
   "isAnimal": true,
   "isReal": true eller false (false hvis det er en statue, figur, tegning, udstoppet dyr, skærmbillede osv.),
   "fake": "hvis isReal er false: kort beskrivelse på dansk af hvad det er, fx 'statue af en giraf i bronze' (ellers tom streng)",
@@ -1601,6 +1655,8 @@ Svar KUN med ét JSON-objekt i præcis dette format:
   "nameEn": "engelsk navn",
   "latin": "videnskabeligt navn på artsniveau, fx Androctonus australis",
   "specificity": en af ${JSON.stringify(LEVELS)} (det niveau dit navn er på),
+  "confidence": tal mellem 0 og 1 for, at netop ARTEN er rigtig. Vær ærlig: brug højst 0.6, hvis de afgørende kendetegn ikke kan ses tydeligt, og over 0.85 kun når arten ikke kan forveksles,
+  "idTips": "1 sætning om hvilke kendetegn på billedet der peger på netop denne art frem for lignende arter",
   "category": en af ${JSON.stringify(CATS.map(c => c.id))},
   "region": en af ${JSON.stringify(REGIONS.map(r => r.id))} (hvor arten naturligt lever; "dk" hvis den lever vildt i Danmark, "hav" for havdyr og polardyr),
   "types": 1-2 værdier fra ${JSON.stringify(TYPES)},
@@ -1609,9 +1665,6 @@ Svar KUN med ét JSON-objekt i præcis dette format:
   "iucn": IUCN-rødlistestatus, en af ["LC","NT","VU","EN","CR","EW","DD"] (tom streng for husdyr og kæledyr),
   "shiny": true KUN hvis netop dette individ har en usædvanlig farvevariant for arten (albino, leucistisk/bleg, melanistisk/sort eller et meget usædvanligt mønster); ellers false. Almindelig forskel på han/hun, unger eller årstidsdragt tæller ikke,
   "variant": "hvis shiny: kort beskrivelse, fx 'leucistisk, næsten hvid pels'; ellers tom streng",
-  "confidence": tal mellem 0 og 1,
-  "alternatives": op til 3 objekter {"name": "...", "latin": "..."} med andre arter det kunne være (ellers []),
-  "idTips": "1 sætning om hvilke kendetegn på billedet der peger på netop denne art frem for lignende arter",
   "description": "2 korte sætninger på dansk i Pokédex-stil om dyret",
   "funFact": "1 overraskende fakta på dansk",
   "size": "typisk størrelse/vægt, kort",
@@ -1643,6 +1696,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       notReal: r.isReal === false, fake: String(r.fake || "").trim(),
       rarityWhy: String(r.rarityWhy || "").trim(), iucn: IUCN[r.iucn] ? r.iucn : "",
       shiny: r.shiny === true, variant: r.shiny === true ? String(r.variant || "").trim() : "",
+      box: cleanBox(r.box),
     };
     const cat = CATALOG_BY_KEY.get(keyFor(d));
     if (cat) Object.assign(d, { name: cat.name, latin: cat.latin, region: cat.region, category: cat.cat });
@@ -1660,7 +1714,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
   }
 
   /* ---------- scanning queue ---------- */
-  const scanningState = it => ["scanning", "prep", "starting"].includes(it.status);
+  const scanningState = it => ["scanning", "closer", "prep", "starting"].includes(it.status);
 
   function renderTrayHead() {
     const shown = state.queue.filter(i => !i.hidden);
@@ -1695,10 +1749,12 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     let s = "";
     if (it.status === "prep" || it.status === "starting") s = "<span>I KØ…</span>";
     else if (it.status === "scanning") s = "<span>ANALYSERER BILLEDET…</span>";
+    else if (it.status === "closer") s = "<span>USIKKER · KIGGER NÆRMERE PÅ DYRET…</span>";
     else if (it.status === "saving") s = "<span>GEMMER…</span>";
     else if (it.status === "paused") s = `<span class="tag warn">PAUSE</span>`;
     else if (d.noAnimal) s = `<span class="tag warn">INTET DYR FUNDET</span>`;
     else if (d.notReal) s = `<span class="tag warn">IKKE ET ÆGTE DYR</span>`;
+    else if (it.status === "ready" && it.result && needsCloser(d)) s = `<span class="tag warn">USIKKER</span>` + (caught ? `<span>LIGNER No.${pad(e.no)}</span>` : "");
     else if (caught) s = `<span class="tag known">ALLEREDE FANGET · No.${pad(e.no)}</span>`;
     else if (e) s = `<span class="tag new">NYT DYR · No.${pad(e.no)}</span>`;
     else if (d.name) s = `<span class="tag bonus">NYT BONUSDYR</span>`;
@@ -1710,6 +1766,8 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     }
     if (it.exif !== undefined && !scanningState(it)) {
       s += it.exif?.geo ? `<span class="pin ok">GPS</span>` : `<span class="pin">INGEN GPS</span>`;
+      const setting = { vild: "VILDT", zoo: "ZOO", hjem: "KÆLEDYR" }[$("#setting").value];
+      if (setting) s += `<span>${setting}</span>`;
       if (it.exif?.takenAt) s += `<span>${esc(fmtDate(it.exif.takenAt).toUpperCase())}</span>`;
     }
     return s;
@@ -1732,7 +1790,11 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
           <div class="field"><label for="c-${it.id}">Gruppe</label><select id="c-${it.id}" data-k="category" ${editable ? "" : "disabled"}>${CATS.map(c => `<option value="${c.id}" ${d.category === c.id ? "selected" : ""}>${esc(c.label)}</option>`).join("")}</select></div>
           <div class="field"><label for="p-${it.id}">Sted</label><input id="p-${it.id}" data-k="place" value="${esc(d.place)}" placeholder="Hvor er billedet taget?" ${editable ? "" : "disabled"}></div>
         </div>
+        ${(it.extra || []).length ? `<div class="xthumbs">${it.extra.map(x => `<img src="${esc(x.url)}" alt="">`).join("")}<span>${it.extra.length} ekstra ${it.extra.length === 1 ? "billede" : "billeder"} af samme dyr</span></div>` : ""}
         ${alts.length ? `<div class="alts"><span>Eller måske:</span>${alts.map((a, n) => `<button data-alt="${n}">${esc(a.name)}</button>`).join("")}</div>` : ""}
+        ${alts.some(a => a.against) && needsCloser(d) ? `<p class="altwhy">${alts.filter(a => a.against).slice(0, 2).map(a => `<b>${esc(a.name)}:</b> ${esc(a.against)}`).join(" ")}</p>` : ""}
+        ${it.closer ? `<p class="altwhy">Tjekket en ekstra gang på et nærbillede af dyret.</p>` : ""}
+        ${it.status === "ready" && it.result && needsCloser(d) && !d.notReal ? `<p class="altwhy">Et billede mere fra en anden vinkel gør AI'en mere sikker.</p>` : ""}
         ${d.notReal ? `<p class="small"><strong>Det ligner ${esc(d.fake || "en efterligning af et dyr")}.</strong> Kun ægte dyr kan registreres. Statuer, figurer, legetøj, tegninger, udstoppede dyr og dyr på skærme tæller ikke.</p>` : ""}
         ${!d.notReal && d.idTips ? `<p class="small"><strong>Kendetegn:</strong> ${esc(d.idTips)}</p>` : ""}
         ${it.error ? `<p class="err">${esc(it.error)}</p>` : ""}
@@ -1740,6 +1802,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
           ${it.status === "paused" ? `<button class="btn blue sm" data-act="retry">Scan igen</button>` : ""}
           ${it.status === "ready" && !d.notReal ? `<button class="btn" data-act="save" ${state.canAdd ? "" : "disabled"}>${caught ? "Tilføj billede" : "Registrér i Dyredex"}</button>` : ""}
           ${it.status === "ready" && d.notReal ? `<button class="btn ghost sm" data-act="real">Det er et ægte dyr</button>` : ""}
+          ${it.status === "ready" && state.vision && state.maxImages >= 2 && (it.extra || []).length < 3 ? `<button class="btn ghost sm" data-act="more">+ Flere billeder af dyret</button>` : ""}
           ${it.status === "ready" && state.vision ? `<button class="btn ghost sm" data-act="rescan">Scan igen</button>` : ""}
           <button class="btn ghost sm" data-act="discard" ${it.status === "saving" ? "disabled" : ""}>Kassér</button>
         </div>`}
@@ -1762,6 +1825,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     it.ctl?.abort();
     document.getElementById("it-" + it.id)?.remove();
     if (!keepUrl && it.url) URL.revokeObjectURL(it.url);
+    if (!keepUrl) for (const x of it.extra || []) URL.revokeObjectURL(x.url);
     renderTrayHead();
   }
   function refreshQueueStatus() {
@@ -1858,11 +1922,29 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     it.status = "scanning"; renderItem(it);
     it.ctl = new AbortController();
     try {
-      const prompt = buildPrompt({ geo: it.exif?.geo, takenAt: it.exif?.takenAt, place: it.draft.place });
-      const r = await state.sample.json(prompt, { images: [it.blob], signal: it.ctl.signal, cache: false });
+      const base = { geo: it.exif?.geo, takenAt: it.exif?.takenAt, place: it.draft.place, setting: $("#setting").value };
+      const extra = (it.extra || []).slice(0, Math.max(0, state.maxImages - 1));
+      const imgs = [it.blob, ...extra.map(x => x.blob)], notes = ["hele billedet", ...extra.map(() => "endnu et billede af dyret fra en anden vinkel")];
+      const r = normResult(await state.sample.json(buildPrompt({ ...base, images: notes }), { images: imgs, signal: it.ctl.signal, cache: false }));
       if (!state.queue.includes(it)) return;
-      it.result = r;
+      it.result = r; it.closer = false;
       it.draft = toDraft(r, it.draft.place, !!it.exif?.geo);
+      // Second look, only when the first was unsure and the animal is small in the frame: same model, far more pixels on the animal.
+      const box = it.draft.box;
+      if (needsCloser(it.draft) && box && boxArea(box) <= 0.5) {
+        it.status = "closer"; renderItem(it);
+        try {
+          const crop = await cropBlob(it.file, box);
+          const cands = (r.alternatives || []).map(a => `${a.name} (${a.latin || "?"})`).join(", ");
+          const keep = state.maxImages - 1;
+          const r2 = normResult(await state.sample.json(
+            buildPrompt({ ...base, previous: { name: it.draft.name, latin: it.draft.latin, cands }, images: ["et nærbillede (udsnit i høj opløsning) af dyret", ...notes.slice(0, keep)] }),
+            { images: [crop, ...imgs.slice(0, keep)], signal: it.ctl.signal, cache: false }));
+          if (!state.queue.includes(it)) return;
+          const d2 = toDraft(r2, it.draft.place, !!it.exif?.geo);
+          if (!d2.noAnimal && d2.name) { it.result = r2; it.draft = { ...d2, box, closer: true }; it.closer = true; }
+        } catch (e2) { if (e2?.code === "cancelled") throw e2; }
+      }
       it.status = "ready";
       if (it.auto) await autoDecide(it);
     } catch (e) {
@@ -1898,6 +1980,7 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
       description: d.description || "", funFact: d.funFact || "", size: d.size || "", habitat: d.habitat || "",
       idTips: d.idTips || "", stats: d.stats || null, confidence: typeof d.confidence === "number" ? d.confidence : null,
       rarityWhy: d.rarityWhy || "", iucn: d.iucn || "", shiny: !!d.shiny, variant: d.variant || "", rv: 2,
+      ...(d.box ? { box: d.box } : {}), ...(d.closer ? { closer: true } : {}),
       ...extra,
     };
   }
@@ -1921,6 +2004,11 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
         const id = "mem-" + (++uid);
         memUrls.set(id, urlOf(it));
         state.sightings.push({ id, ...doc });
+        for (const [n, x] of (it.extra || []).entries()) {
+          const xid = "mem-" + (++uid);
+          memUrls.set(xid, x.url);
+          state.sightings.push({ id: xid, ...doc, box: undefined, createdAt: doc.createdAt + n + 1, geo: x.exif?.geo || doc.geo, takenAt: x.exif?.takenAt || doc.takenAt, fileSig: x.sig });
+        }
         removeItem(it, true);
       } else {
         uploaded = await state.assets.upload(it.blob, { type: "image/jpeg" });
@@ -1928,6 +2016,16 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
         try { thumb = await state.assets.upload(await makeThumb(it.blob), { type: "image/jpeg" }); doc.thumbId = thumb.id; } catch { thumb = null; }
         await state.db.collection(sightPath(state.me)).add(doc);
         uploaded = null; thumb = null;
+        for (const [n, x] of (it.extra || []).entries()) {
+          try {
+            const up = await state.assets.upload(x.blob, { type: "image/jpeg" });
+            const xdoc = { ...doc, assetId: up.id, thumbId: null, createdAt: doc.createdAt + n + 1, geo: x.exif?.geo || doc.geo, takenAt: x.exif?.takenAt || doc.takenAt, fileSig: x.sig };
+            delete xdoc.box;
+            try { xdoc.thumbId = (await state.assets.upload(await makeThumb(x.blob), { type: "image/jpeg" })).id; } catch {}
+            await state.db.collection(sightPath(state.me)).add(xdoc);
+            importSigs.add(x.sig);
+          } catch {}
+        }
         removeItem(it);
       }
       importSigs.add(doc.fileSig);
@@ -1966,8 +2064,17 @@ ${catalog}${bonus ? `\n\nBrugeren har også fanget disse arter uden for kataloge
     renderViewer();
     try {
       const blob = await fetch(photoSrc(p)).then(r => { if (!r.ok) throw { code: "fetch" }; return r.blob(); }, () => { throw { code: "fetch" }; });
-      const prompt = buildPrompt({ geo: p.geo, takenAt: p.takenAt, place: p.geo ? "" : p.place, previous: p });
-      const r = await state.sample.json(prompt, { images: [blob], signal: ctl.signal, cache: false, modelTier: "complex" });
+      let box = cleanBox(p.box);
+      if (!box) {
+        try { box = cleanBox((await state.sample.json(`Find det dyr, der er hovedmotivet på billedet. Svar KUN med JSON: {"box": [x0, y0, x1, y1]} for en ramme tæt omkring dyret, som tal fra 0 til 1, hvor [0, 0] er øverste venstre hjørne. Hvis der ikke er et dyr: {"box": null}`, { images: [blob], signal: ctl.signal, cache: false, modelTier: "quick" }))?.box); }
+        catch (e) { if (e?.code === "cancelled" || DISABLED.includes(e?.code)) throw e; }
+      }
+      const crop = box && boxArea(box) <= 0.6 ? await cropBlob(blob, box).catch(() => null) : null;
+      const two = crop && state.maxImages >= 2;
+      const prompt = buildPrompt({ geo: p.geo, takenAt: p.takenAt, place: p.geo ? "" : p.place, previous: p, setting: $("#setting").value,
+        images: two ? ["et nærbillede (udsnit) af dyret", "hele billedet"] : crop ? ["et nærbillede (udsnit) af dyret"] : ["hele billedet"] });
+      const r = normResult(await state.sample.json(prompt, { images: two ? [crop, blob] : [crop || blob], signal: ctl.signal, cache: false }));
+      if (r && box && !cleanBox(r.box)) r.box = box;
       if (state.refine?.ctl !== ctl) return;
       const d = toDraft(r, p.place, false);
       state.refine = d.noAnimal || !d.name
@@ -2942,6 +3049,22 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${missing[0].key}": {"na
     const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
     if (files.length) { e.preventDefault(); addFiles(files); }
   });
+  // Extra photos of the same animal: they are judged together with the first one and saved as their own finds of the species.
+  let moreFor = null;
+  $("#morefile").addEventListener("change", async e => {
+    const files = [...e.target.files].filter(f => /^image\//.test(f.type || "")); e.target.value = "";
+    const it = state.queue.find(i => i.id === moreFor);
+    if (!it || !files.length) return;
+    readDraft(it);
+    it.extra = it.extra || [];
+    for (const f of files.slice(0, 3 - it.extra.length)) {
+      try { it.extra.push({ file: f, blob: await compress(f), url: URL.createObjectURL(f), exif: await readExif(f), sig: fileSig(f) }); } catch {}
+    }
+    if (!state.queue.includes(it)) return;
+    it.status = "prep"; it.error = ""; renderItem(it); pump();
+  });
+  $("#setting").value = store.get("dyredex-setting") || "";
+  $("#setting").addEventListener("change", e => store.set("dyredex-setting", e.target.value));
   $("#default-place").value = store.get("dyredex-place") || "";
   $("#default-place").addEventListener("change", e => store.set("dyredex-place", e.target.value.trim()));
 
@@ -2962,6 +3085,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${missing[0].key}": {"na
     else if (act === "real") { readDraft(it); it.draft.notReal = false; it.draft.overridden = true; renderItem(it); }
     else if (act === "discard") removeItem(it);
     else if (act === "retry" || act === "rescan") { readDraft(it); it.status = "prep"; it.error = ""; renderItem(it); pump(); }
+    else if (act === "more") { moreFor = it.id; $("#morefile").click(); }
   });
   $("#queue").addEventListener("input", e => {
     const el = e.target.closest(".scan"); if (!el || !e.target.dataset.k) return;
@@ -3073,7 +3197,7 @@ Svar KUN med JSON, hvor nøglerne er dyrenes nøgler: {"${missing[0].key}": {"na
     showNotice("Forbinder til din Dyredex…");
     const [db, assets, sample, user, tts] = await Promise.all(["db", "assets", "sample", "user", "tts"].map(n => claude.use(n).catch(() => null)));
     Object.assign(state, { db, assets, sample, user, tts });
-    if (sample) state.vision = !!(await sample.limits().catch(() => null))?.images;
+    if (sample) { const lim = await sample.limits().catch(() => null); state.vision = !!lim?.images; state.maxImages = Math.max(1, Math.min(4, Number(lim?.images?.maxCount) || 1)); }
     // An outside Editor may have no platform id; such a trainer gets a stable id kept in this browser.
     let me = null;
     try { me = user ? await user.id() : null; } catch {}
