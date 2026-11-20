@@ -21,11 +21,15 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 
 def add_flags(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    df["i_drift"] = df["status"].isin(config.OPERATING_STATUS)
+    counts = df["email_domaene"].value_counts()
+    shared = set(counts[counts >= config.SHARED_DOMAIN_MIN].index)
+    df["delt_email_domaene"] = df["email_domaene"].isin(shared)
     df["har_hjemmeside"] = df["hjemmeside"].notna()
     df["har_email"] = df["har_email"].fillna(False).astype(bool)
-    df["har_email_proxy"] = df["email_domaene"].notna()
+    df["har_email_proxy"] = df["email_domaene"].notna() & ~df["delt_email_domaene"]
     df["har_site_eller_proxy"] = df["har_hjemmeside"] | df["har_email_proxy"]
-    df["site_kandidat"] = df["hjemmeside"].fillna(df["email_domaene"])
+    df["site_kandidat"] = df["hjemmeside"].fillna(df["email_domaene"].where(df["har_email_proxy"]))
     return df
 
 
@@ -64,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FEJL: {a.inp} findes ikke - kør først `python -m src.extract`.", file=sys.stderr)
         return 2
     df = pd.read_csv(a.inp, dtype={"cvr": str, "branchekode": str})
+    n_all = len(df)
+    df = df[df["status"].isin(config.OPERATING_STATUS)]
+    print(f"{n_all - len(df)} virksomheder under konkurs/likvidation/opløsning udeladt.\n")
     by_group = coverage_table(df, ["gruppe"])
     by_size = coverage_table(df, ["gruppe", "ansatte_bucket"])
     big = coverage_table(df[df["ansatte_bucket"].isin(["10-49", "50+"])], ["gruppe"])

@@ -8,7 +8,7 @@ from src.cvr_client import CvrClient, active_query, branch_query, has_path
 
 
 def doc(cvr=1, kode="621000", form=("80", "APS"), site="www.Firma.dk/om", mail="info@firma.dk",
-        interval="ANTAL_10_19"):
+        interval="ANTAL_10_19", erst=None):
     return {"Vrvirksomhed": {
         "cvrNummer": cvr, "reklamebeskyttet": False,
         "hjemmeside": [
@@ -26,7 +26,8 @@ def doc(cvr=1, kode="621000", form=("80", "APS"), site="www.Firma.dk/om", mail="
             "nyesteAarsbeskaeftigelse": {"aar": 2025, "intervalKodeAntalAnsatte": "ANTAL_2_4"},
             "nyesteKvartalsbeskaeftigelse": {"aar": 2026, "kvartal": 2,
                                              "intervalKodeAntalAnsatte": interval},
-            "nyesteMaanedsbeskaeftigelse": None}}}
+            "nyesteMaanedsbeskaeftigelse": None,
+            "nyesteErstMaanedsbeskaeftigelse": erst}}}
 
 
 def test_flatten_minimises_and_normalises():
@@ -119,3 +120,9 @@ def test_parse_xbrl_picks_latest_undimensioned_context():
     <d:Equity contextRef="dim">999</d:Equity>
     <d:CompletedDevelopmentProjects contextRef="c1">40</d:CompletedDevelopmentProjects></xbrl>"""
     assert financials.parse_xbrl(x) == {"omsaetning": 250.0, "udv_projekter_faerdige": 40.0}
+
+
+def test_erst_employment_wins_when_newer():
+    r = extract.flatten(doc(interval="ANTAL_50_99", erst={
+        "aar": 2026, "maaned": 8, "antalAnsatte": 22, "intervalKodeAntalAnsatte": "ANTAL_20_49"}))
+    assert r["ansatte_kilde"] == "erst_maaned" and r["ansatte_bucket"] == "10-49" and r["ansatte_aar"] == 2026

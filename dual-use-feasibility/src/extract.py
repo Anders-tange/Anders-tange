@@ -62,10 +62,11 @@ def _current(entries) -> list[str]:
     return out
 
 
-def _employment(meta: dict) -> tuple[str | None, int | None, str | None]:
+def _employment(meta: dict) -> tuple[str | None, int | None, str | None, int | None]:
     """Nyeste beskæftigelsesoplysning: (intervalkode, antal, kilde)."""
     cands = []
-    for key, kilde in (("nyesteMaanedsbeskaeftigelse", "maaned"),
+    for key, kilde in (("nyesteErstMaanedsbeskaeftigelse", "erst_maaned"),
+                       ("nyesteMaanedsbeskaeftigelse", "maaned"),
                        ("nyesteKvartalsbeskaeftigelse", "kvartal"),
                        ("nyesteAarsbeskaeftigelse", "aar")):
         b = meta.get(key)
@@ -76,9 +77,9 @@ def _employment(meta: dict) -> tuple[str | None, int | None, str | None]:
         cands.append(((aar, sub), b.get("intervalKodeAntalAnsatte"),
                       b.get("antalAnsatte"), kilde))
     if not cands:
-        return None, None, None
-    _, kode, antal, kilde = max(cands, key=lambda c: c[0])
-    return kode, antal, kilde
+        return None, None, None, None
+    (aar, _), kode, antal, kilde = max(cands, key=lambda c: c[0])
+    return kode, antal, kilde, aar
 
 
 def flatten(doc: dict) -> dict:
@@ -102,7 +103,7 @@ def flatten(doc: dict) -> dict:
     mails = [m for m in mails if m]
     own_mail = [m for m in mails if m not in config.FREEMAIL_DOMAINS]
 
-    ikode, antal, kilde = _employment(meta)
+    ikode, antal, kilde, aar = _employment(meta)
     return {
         "cvr": v.get("cvrNummer"),
         "branchekode": kode,
@@ -118,6 +119,7 @@ def flatten(doc: dict) -> dict:
         "ansatte_interval": ikode,
         "ansatte_bucket": config.employee_bucket(ikode, antal),
         "ansatte_kilde": kilde,
+        "ansatte_aar": aar,
     }
 
 

@@ -160,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
                   file=sys.stderr)
             return 2
         df = add_flags(pd.read_csv(a.inp, dtype={"cvr": str, "branchekode": str}))
-        df = df[df["site_kandidat"].notna()]
+        df = df[df["site_kandidat"].notna() & df["i_drift"]]
         if a.min_bucket == "10+":
             df = df[df["ansatte_bucket"].isin(["10-49", "50+"])]
         sample = df.sample(n=min(a.n, len(df)), random_state=a.seed)

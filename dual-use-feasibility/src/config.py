@@ -5,9 +5,8 @@ Kilder
 * Endpoint, indeks, type og felterne markeret VERIFICERET er taget fra
   Erhvervsstyrelsens vejledning "Kom godt igang med Elasticsearch"
   (erhvervsstyrelsen.dk/kom-godt-igang-med-elasticSearch, version 3/11-2025).
-* Felter markeret UVERIFICERET står ikke i vejledningen. De følger den
-  almindeligt kendte CVR-datamodel, men skal bekræftes med
-  `python -m src.cvr_client probe`, så snart der er login.
+* Felter markeret "VERIFICERET 20/11-2026" står ikke i vejledningen, men er
+  bekræftet mod rigtige data med `python -m src.cvr_client probe`.
 * Branchekoderne er DB25-koder slået op i Danmarks Statistiks nøgle
   "DB07_DB25_nøgle_brancher.xlsx" (ark "3. DB25 Alle koder").
 """
@@ -22,26 +21,29 @@ F_CVR = "Vrvirksomhed.cvrNummer"  # VERIFICERET
 F_NAVN = f"{M}.nyesteNavn.navn"  # VERIFICERET
 F_STATUS = f"{M}.sammensatStatus"  # VERIFICERET
 F_LIVSFORLOEB = "Vrvirksomhed.livsforloeb"  # VERIFICERET (nested)
-F_BRANCHEKODE = f"{M}.nyesteHovedbranche.branchekode"  # UVERIFICERET
-F_BRANCHETEKST = f"{M}.nyesteHovedbranche.branchetekst"  # UVERIFICERET
-F_FORMKODE = f"{M}.nyesteVirksomhedsform.virksomhedsformkode"  # UVERIFICERET
-F_FORM = f"{M}.nyesteVirksomhedsform.kortBeskrivelse"  # UVERIFICERET
-F_KONTAKT = f"{M}.nyesteKontaktoplysninger"  # UVERIFICERET (liste af strenge)
-F_AAR = f"{M}.nyesteAarsbeskaeftigelse"  # UVERIFICERET
-F_KVARTAL = f"{M}.nyesteKvartalsbeskaeftigelse"  # UVERIFICERET
-F_MAANED = f"{M}.nyesteMaanedsbeskaeftigelse"  # UVERIFICERET
-F_HJEMMESIDE = "Vrvirksomhed.hjemmeside"  # UVERIFICERET (liste m. periode)
-F_EMAIL = "Vrvirksomhed.elektroniskPost"  # UVERIFICERET (liste m. periode)
-F_REKLAME = "Vrvirksomhed.reklamebeskyttet"  # UVERIFICERET
+F_BRANCHEKODE = f"{M}.nyesteHovedbranche.branchekode"  # VERIFICERET 20/11-2026
+F_BRANCHETEKST = f"{M}.nyesteHovedbranche.branchetekst"  # VERIFICERET 20/11-2026
+F_FORMKODE = f"{M}.nyesteVirksomhedsform.virksomhedsformkode"  # VERIFICERET 20/11-2026
+F_FORM = f"{M}.nyesteVirksomhedsform.kortBeskrivelse"  # VERIFICERET 20/11-2026
+F_KONTAKT = f"{M}.nyesteKontaktoplysninger"  # VERIFICERET 20/11-2026 (liste af strenge)
+F_AAR = f"{M}.nyesteAarsbeskaeftigelse"  # VERIFICERET 20/11-2026
+F_KVARTAL = f"{M}.nyesteKvartalsbeskaeftigelse"  # VERIFICERET 20/11-2026
+F_MAANED = f"{M}.nyesteMaanedsbeskaeftigelse"  # VERIFICERET 20/11-2026
+# De tre felter ovenfor er frosset i 2018/2019. Det aktuelle tal (månedligt,
+# fra eIndkomst) ligger her - fundet ved probe 20/11-2026:
+F_ERST = f"{M}.nyesteErstMaanedsbeskaeftigelse"  # VERIFICERET 20/11-2026
+F_HJEMMESIDE = "Vrvirksomhed.hjemmeside"  # VERIFICERET 20/11-2026 (liste m. periode)
+F_EMAIL = "Vrvirksomhed.elektroniskPost"  # VERIFICERET 20/11-2026 (liste m. periode)
+F_REKLAME = "Vrvirksomhed.reklamebeskyttet"  # VERIFICERET 20/11-2026
 
 SOURCE_FIELDS = [
     F_CVR, F_STATUS, F_BRANCHEKODE, F_BRANCHETEKST, F_FORMKODE, F_FORM,
-    F_KONTAKT, F_AAR, F_KVARTAL, F_MAANED, F_HJEMMESIDE, F_EMAIL, F_REKLAME,
+    F_KONTAKT, F_ERST, F_AAR, F_KVARTAL, F_MAANED, F_HJEMMESIDE, F_EMAIL, F_REKLAME,
 ]
 # Virksomhedsnavn hentes bevidst IKKE i feasibility-fasen (dataminimering).
 
 # Personligt ejede virksomhedsformer (personhenførbare) - udelades på rækkeniveau.
-# UVERIFICERET kodeliste: 10 = enkeltmandsvirksomhed, 15 = PMV, 30 = I/S.
+# VERIFICERET 20/11-2026: 10 = ENK, 15 = PMV, 30 = I/S.
 PERSONAL_FORM_CODES = {"10", "15", "30"}
 PERSONAL_FORM_SHORT = {"ENK", "PMV", "I/S"}
 
@@ -147,4 +149,12 @@ FREEMAIL_DOMAINS = {
     "gmx.de", "aol.com", "e-box.dk", "live.se", "hotmail.se",
     "waoomail.dk", "fibermail.dk", "energimail.dk", "bbsyd.dk", "nypost.dk",
     "dlgmail.dk", "dbmail.dk", "firma.tele.dk", "vip.cybercity.dk", "cybercity.dk",
+    "pm.me",
 }
+
+# Status, der tæller som "i drift". Øvrige (UNDERKONKURS, UNDERFRIVILLIGLIKVIDATION,
+# UNDERTVANGSOPLØSNING ...) er formelt aktive i CVR, men udelades af populationen.
+OPERATING_STATUS = {"NORMAL", "Aktiv"}
+# Et e-maildomæne, som mindst så mange virksomheder deler, tilhører typisk en
+# revisor eller registreringsagent (fx handelskammer.dk) og er ikke en proxy.
+SHARED_DOMAIN_MIN = 5
