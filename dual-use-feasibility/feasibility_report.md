@@ -1,73 +1,59 @@
 # Feasibility-rapport: kortlægning af dansk dual-use-kapacitet
 
-Status pr. 13. november 2026. Anders Tange og Gustav Manthorpe, Cand.merc.(it.), CBS.
+Opdateret 20. november 2026 med rigtige CVR-data. Anders Tange og Gustav Manthorpe, Cand.merc.(it.), CBS.
 
 ## Anbefaling
 
-**Betinget go.** Intet af det, der kunne undersøges uden CVR-login, taler imod
-projektet, men de to tal, go/no-go-kriterierne hviler på – hjemmesidedækning
-og CVR-adgang – findes endnu ikke. Planlæg efter **plan B (årsrapporter)** som
-hoveddesign og betragt DST-kobling som en mulig udvidelse, ikke en forudsætning.
+**Go – med to justeringer.** Begræns populationen til virksomheder med
+**10+ ansatte**, og byg et trin, der **finder hjemmesider ud fra
+virksomhedsnavnet**, ind i pipelinen. Brug **årsrapporter (plan B)** som
+hoveddesign for regressionen, og betragt DST-kobling som en mulig udvidelse,
+ikke en forudsætning.
 
 | Kriterium | Status | Grundlag |
 |---|---|---|
-| CVR-adgang inden for 3 uger | **Åben** – ansøgning ikke sendt | Udkast klar. En tredjepartskilde nævner "et par ugers" ventetid, så mailen bør sendes straks |
-| ≥ 60 % af virksomheder med 10+ ansatte har fungerende hjemmeside med brugbar tekst | **Ikke målt** – kræver CVR-udtræk | Kode klar og testet offline. Røgtest på 5 kendte forsvarsteknologi-sites: 5/5 brugbare |
-| Realistisk vej til DST-kobling eller årsrapport-proxyer | **Delvist opfyldt** | Årsrapporter: åben adgang verificeret, men svage FoU-proxyer. DST-kobling: usandsynlig under specialeordningen |
+| CVR-adgang inden for 3 uger | **Opfyldt** | Login modtaget, alle felter verificeret, fuldt udtræk på under 2 minutter |
+| ≥ 60 % af virksomheder med 10+ ansatte har fungerende hjemmeside med brugbar tekst | **Opfyldt, men kun med navnebaseret søgning** | Skøn 68–71 %. Med CVR's egne oplysninger alene: 54 % |
+| Realistisk vej til DST-kobling eller årsrapport-proxyer | **Opfyldt via årsrapporter** | XBRL for 99 % af virksomhederne med 10+ ansatte. Udviklingsomkostninger aktiveret hos 30 %. DST-kobling stadig usandsynlig |
 
-Tre ting bør I vide, før I lægger jer fast:
+Det vigtigste at vide:
 
-1. **Omsætning mangler i de fleste årsrapporter.** I en tilfældig stikprøve
-   på 200 nye regnskaber havde 14 % omsætning og 1 % aktiverede
-   udviklingsomkostninger. Bruttofortjeneste (78 %) og antal ansatte (78 %) er
-   de variable, der kan bære en regression.
-2. **DST's specialeordning er bygget til forudvalgte data**, ikke til at koble
-   egne data på. Reglerne nævner ikke upload af egne data, og de stiller krav
-   til vejleders registererfaring, som skal afklares med Jonas Hedman først.
-3. **CVR bruger DB25, ikke DB07.** Fem af seks kandidatkoder har ændret numre
-   eller indhold på 6-cifret niveau.
+1. **CVR's hjemmesidefelt rækker ikke.** Kun 45 % af virksomhederne med 10+
+   ansatte i kernekoderne har en hjemmeside registreret i CVR. Uden et ekstra
+   trin, der finder sites ud fra navnet, falder dækningen under kriteriet.
+2. **Små virksomheder bør ud.** Blandt virksomheder med 1–9 ansatte har kun
+   halvdelen af dem, der *har* et site, brugbar tekst. De er desuden 10 gange så
+   mange, og mange er enkeltpersoner med et ApS.
+3. **Halvdelen af sitene er på engelsk.** Klassifikationen skal kunne begge sprog.
+4. **Omsætning mangler i 86 % af årsrapporterne.** Brug bruttofortjeneste,
+   antal ansatte og personaleomkostninger.
 
 ## Tjek 1: CVR-adgang
 
-### Procedure
-- Adgang søges pr. mail til **cvrselvbetjening@erst.dk**. Adressen fremgår af
-  Erhvervsstyrelsens datahub-side for "System-til-system adgang til CVR-data"
-  og går igen i flere tredjepartskilder.
-- **Ikke verificeret:** den aktuelle artikel på datacvr.virk.dk
-  (`/artikel/system-til-system-adgang-til-cvr-data`) ligger bag en
-  Cloudflare-spærring og kunne ikke læses herfra. Om erklæringen skal
-  vedhæftes første mail, eller sendes til jer bagefter, skal I selv læse i en
-  browser, før I sender.
-- Mailudkast: [`drafts/01_mail_erhvervsstyrelsen_cvr.md`](drafts/01_mail_erhvervsstyrelsen_cvr.md). Intet er sendt.
-
-### Teknisk grundlag
-Verificeret mod Erhvervsstyrelsens vejledning "Kom godt igang med
-Elasticsearch" (version 3/11-2025):
+Login modtaget den 20. november 2026. `python -m src.cvr_client probe` bekræftede
+alle feltnavne mod rigtige data. Tekniske noter:
 
 | Punkt | Værdi |
 |---|---|
-| Endpoint | `POST http://distribution.virk.dk/cvr-permanent/virksomhed/_search` |
-| Autentificering | HTTP Basic (bruger-id og password) |
-| Elasticsearch-version | 6.8.23, kun læseadgang via REST |
-| Store udtræk | scroll: `?scroll=1m`, derefter `/_search/scroll`, til sidst `DELETE /_search/scroll` |
-| Aktive virksomheder | nested query på `Vrvirksomhed.livsforloeb` uden `periode.gyldigTil` |
-| Andre typer | `produktionsenhed` (`VrproduktionsEnhed.pNummer`), `deltager` (`Vrdeltager.enhedsNummer`) |
-| Driftskrav | Ineffektive løsninger kan få adgangen spærret midlertidigt; sænk `size` frem for at forlænge scroll |
+| Endpoint | `https://distribution.virk.dk:8443` (HTTPS, oplyst i adgangsmailen) eller `http://distribution.virk.dk` (vejledningen) |
+| Indeks | `cvr-permanent/virksomhed`, Elasticsearch 6.8 |
+| Hastighed | 48.957 dokumenter på 1 min. 40 sek. med scroll og `size=200` |
+| Aggregeringer | Virker på numeriske felter (fx `virksomhedsformkode`), ikke på tekstfelter |
 
-Herfra svarer endpointet med HTTP 401 uden login, så netværket er ikke en
-hindring. To forbehold:
+**Fundet under verifikationen:** felterne `nyesteAarsbeskaeftigelse`,
+`nyesteKvartalsbeskaeftigelse` og `nyesteMaanedsbeskaeftigelse` er ikke
+opdateret siden 2018/2019. Det aktuelle antal ansatte står i
+`nyesteErstMaanedsbeskaeftigelse` (august 2026 for de fleste). Forskellen er
+stor: én testvirksomhed har 87 ansatte i det gamle felt og 22 i det nye.
+Koden bruger nu det nye felt, når det er nyest. 51 % af virksomhederne har et
+tal fra 2026 i feltet; 32 % har ingen beskæftigelsesoplysninger overhovedet
+(typisk virksomheder uden ansatte).
 
-- **Vejledningen bruger `http://`.** HTTPS mod `distribution.virk.dk` blev
-  afbrudt herfra; det kan skyldes dette miljøs proxy. Test
-  `CVR_BASE_URL=https://distribution.virk.dk` lokalt. Virker det ikke, sendes
-  login ukrypteret – brug da et password, I ikke bruger andre steder.
-- **Feltnavne uden for vejledningen er ikke verificeret.** Vejledningen
-  dokumenterer kun `cvrNummer`, `virksomhedMetadata.nyesteNavn`,
-  `nyesteBeliggenhedsadresse`, `sammensatStatus`, `livsforloeb` og
-  `sidstIndlaest`. Felterne til branche, virksomhedsform, kontaktoplysninger,
-  beskæftigelse og reklamebeskyttelse følger den almindeligt kendte
-  datamodel og er markeret `UVERIFICERET` i `src/config.py`.
-  `python -m src.cvr_client probe` tjekker dem alle mod et rigtigt dokument.
+Koderne for virksomhedsform er bekræftet: 10 = ENK, 15 = PMV, 30 = I/S.
+
+**Sikkerhed:** dette miljøs proxy kan ikke nå port 8443, så udtrækket er kørt
+over `http://`, dvs. med login i klartekst. Brug HTTPS-adressen, når I kører
+lokalt, og skift evt. password.
 
 ## Tjek 2: virksomheder og hjemmesider pr. branchekode
 
@@ -108,33 +94,122 @@ Listen er et rimeligt udgangspunkt, men den har tre svagheder:
 - **Hovedbranche er selvvalgt** og siger lidt om dual-use. Branchekoden bør
   bruges til at afgrænse populationen, ikke som forklarende variabel alene.
 
+### Population
+Udtræk 20. november 2026, aktive virksomheder pr. hovedbranche:
+
+- **48.957 aktive** i alle udvalgte koder.
+- **22.950 personligt ejede** (ENK, PMV, I/S) er kun talt, ikke gemt. Kun 12 af
+  dem har 10+ ansatte, så de betyder intet for en 10+-population.
+- **663 under konkurs, likvidation eller tvangsopløsning** er udeladt; de står
+  som aktive i CVR, men er ikke i drift.
+- Tilbage: **25.344 virksomheder i drift**, heraf **2.146 med 10+ ansatte i
+  kernekoderne** (2.427 inkl. 58.2, 61 og de militære koder).
+- 74 % er reklamebeskyttede. Det hindrer ikke analyse, men de må ikke kontaktes
+  i markedsføringsøjemed.
+
 ### Dækningstabel
-**Kan ikke udfyldes uden CVR-login.** Tabellen dannes af `src/extract.py` og
-`src/coverage.py`:
+Virksomheder i drift, ekskl. personligt ejede. "Eget domæne" er e-mail med
+virksomhedens eget domæne, dvs. uden gmail o.l. og uden domæner, som 5 eller
+flere virksomheder deler. Sidstnævnte er typisk revisorer og
+registreringsagenter (fx `handelskammer.dk`, 37 virksomheder).
 
-| Gruppe | Aktive | Med hjemmeside | Med e-mail | E-mail med eget domæne | Hjemmeside eller domæne | 0 ans. | 1–9 | 10–49 | 50+ |
-|---|---|---|---|---|---|---|---|---|---|
-| 26 | – | – | – | – | – | – | – | – | – |
-| 30.3 | – | – | – | – | – | – | – | – | – |
-| 62 | – | – | – | – | – | – | – | – | – |
-| 63 | – | – | – | – | – | – | – | – | – |
-| 71.12 | – | – | – | – | – | – | – | – | – |
-| 72.1 | – | – | – | – | – | – | – | – | – |
+**Alle størrelser**
 
-"E-mail med eget domæne" udelader gmail, hotmail, live.dk og lignende, da de
-ikke peger på en hjemmeside. Personligt ejede virksomheder tælles kun samlet.
+| Gruppe | I drift | Hjemmeside i CVR | E-mail i CVR | Eget domæne | Hjemmeside eller domæne |
+|---|---|---|---|---|---|
+| 26 Elektronik/optik | 718 | 28,6 % | 50,3 % | 45,7 % | 48,5 % |
+| 30.3 Luft- og rumfart | 58 | 27,6 % | 39,7 % | 36,2 % | 44,8 % |
+| 62 It-programmering/-konsulent | 13.768 | 26,8 % | 49,9 % | 41,5 % | 45,1 % |
+| 63 It-infrastruktur/info | 1.466 | 28,0 % | 47,1 % | 40,0 % | 44,6 % |
+| 71.12 Ingeniørrådgivning | 5.527 | 19,5 % | 47,1 % | 37,6 % | 39,4 % |
+| 72.1 FoU natur/teknik | 1.327 | 23,8 % | 44,2 % | 36,8 % | 41,0 % |
+| *58.2 Software* | 2.121 | 29,4 % | 42,9 % | 38,0 % | 42,5 % |
+| *61 Tele/satellit* | 320 | 24,1 % | 49,7 % | 45,0 % | 49,4 % |
+| *Militære koder* | 39 | 28,2 % | 41,0 % | 35,9 % | 35,9 % |
 
-### Stikprøvetjek af hjemmesider
-`src/site_sample.py` trækker 200 tilfældige virksomheder, henter robots.txt og
-forsiden, og gemmer statuskode, antal ord og sprog – ingen tekst. "Brugbar"
-betyder mindst 150 ord på dansk eller engelsk på forsiden.
+**Kun 10+ ansatte**
 
-Kun en røgtest er kørt (terma.com, systematic.com, weibel.dk, mydefence.com,
-quadsat.com): 5/5 svarede, ingen blev afvist af robots.txt, 307–1.076 ord, alle
-på engelsk. Det viser, at koden virker, ikke hvordan dækningen er – de fem er
-håndplukkede og velkendte. To ting at holde øje med i den rigtige stikprøve:
-andelen af rent engelsksprogede sites (klassifikationsmodellen skal kunne begge
-sprog) og sites med lidt tekst og meget JavaScript, som koden markerer særskilt.
+| Gruppe | I drift | Hjemmeside i CVR | Hjemmeside eller domæne |
+|---|---|---|---|
+| 26 | 182 | 30,2 % | 50,5 % |
+| 30.3 | 16 | 31,2 % | 43,8 % |
+| 62 | 1.154 | 50,4 % | 65,8 % |
+| 63 | 130 | 43,1 % | 58,5 % |
+| 71.12 | 467 | 41,8 % | 63,6 % |
+| 72.1 | 197 | 39,6 % | 53,3 % |
+| *58.2* | 209 | 56,9 % | 67,0 % |
+| *61* | 66 | 30,3 % | 47,0 % |
+| *Militære koder* | 6 | 50,0 % | 66,7 % |
+
+**Fordeling på ansatte** (alle i drift, ekskl. personligt ejede)
+
+| Gruppe | Ukendt | 0 | 1–9 | 10–49 | 50+ |
+|---|---|---|---|---|---|
+| 26 | 200 | 16 | 333 | 124 | 60 |
+| 30.3 | 30 | 1 | 11 | 11 | 6 |
+| 62 | 4.431 | 456 | 8.027 | 933 | 236 |
+| 63 | 699 | 54 | 634 | 93 | 37 |
+| 71.12 | 1.535 | 144 | 3.533 | 388 | 95 |
+| 72.1 | 509 | 37 | 623 | 153 | 48 |
+| *58.2* | 1.107 | 48 | 813 | 175 | 36 |
+| *61* | 103 | 8 | 152 | 49 | 19 |
+
+Fordelingen er opgjort før udeladelsen af virksomheder under opløsning, så
+tallene er lidt højere end "I drift" ovenfor. "Ukendt" er virksomheder uden
+beskæftigelsesoplysninger i CVR, som regel uden ansatte.
+
+Bemærk, at virksomheder med 50+ ansatte i branche 26 og 30.3 *sjældnere* har
+en registreret hjemmeside end mellemstore. Mange er datterselskaber i
+koncerner, hvor sitet står på moderselskabet eller et andet domæne.
+
+### Stikprøver af hjemmesider
+Forside og robots.txt hentet med 1 sekunds pause, identificerende User-Agent
+og robots.txt respekteret. Kun nøgletal er gemt. "Brugbar" betyder mindst 150
+ord på dansk eller engelsk på forsiden.
+
+| | Alle størrelser (n=200) | 10+ ansatte (n=200) |
+|---|---|---|
+| Svarer (HTTP < 400) | 84 % | 92 % |
+| Afvist af robots.txt | 2 % | 4 % |
+| Brugbar forside-tekst | 56 % | **86 %** |
+| Median antal ord på forsiden | 392 | 855 |
+| Sprog | 71 da / 69 en | 89 da / 91 en |
+
+For 10+ ansatte afhænger brugbarheden af, hvor domænet kommer fra:
+
+| Kilde | n | Svarer | Brugbar |
+|---|---|---|---|
+| Hjemmeside registreret i CVR | 147 | 97 % | 92 % |
+| Kun e-maildomæne | 53 | 81 % | 72 % |
+
+Blandt de 27 sites med 10+ ansatte, der ikke var brugbare: 7 blev afvist af
+robots.txt, 9 havde lidt tekst og meget JavaScript (kan reddes med
+browser-rendering), og resten fejlede eller havde for lidt tekst.
+
+### Kan manglende hjemmesider findes?
+38 % af virksomhederne med 10+ ansatte i kernekoderne har hverken hjemmeside
+eller eget domæne i CVR. `src/site_discovery.py` tog 100 af dem og gættede på
+`<navn>.dk` og `<navn>.com`. Et fund tæller kun, hvis forsiden viser
+virksomhedens CVR-nummer (25) eller navn (28).
+
+**53 af 100 blev fundet.** Det er en nedre grænse – en søgemaskine-API eller
+opslag i fx Google Places ville finde flere. Valideringen på navn er svagere
+end på CVR-nummer, så en lille andel kan være forkerte fund.
+
+### Skøn for kriteriet
+For de 2.146 virksomheder med 10+ ansatte i kernekoderne:
+
+| Del | Andel | Brugbar | Bidrag |
+|---|---|---|---|
+| Hjemmeside i CVR | 45,2 % | 92 % | 41,6 % |
+| Kun eget e-maildomæne | 16,9 % | 72 % | 12,2 % |
+| Intet i CVR, fundet via navn | 37,9 % × 53 % | 72–86 % (antaget) | 14,5–17,3 % |
+| **I alt** | | | **68–71 %** |
+
+Kun med CVR's egne oplysninger: 54 %. Brugbarheden for navnefundne sites er
+ikke målt; intervallet går fra e-maildomænernes 72 % til gennemsnittets 86 %.
+Skønnet hviler på stikprøver på 100–200, så usikkerheden er nogle få
+procentpoint.
 
 ## Tjek 3: registerdata fra Danmarks Statistik
 
@@ -171,60 +246,58 @@ vil kun en del af jeres virksomheder kunne genfindes.
 
 ### Plan B: årsrapporter
 Regnskabsindekset `http://distribution.virk.dk/offentliggoerelser/_search`
-er **åbent uden login** og kan nås herfra. Hvert hit linker til årsrapporten
-som XBRL. `src/financials.py` henter og parser dem.
+er åbent uden login. Hvert hit linker til årsrapporten som XBRL, som
+`src/financials.py` henter og parser.
 
-Pilot: 200 tilfældige regnskaber offentliggjort siden 1/1-2026, alle brancher:
+| Variabel | Tilfældige regnskaber, alle brancher (n=200) | Egne virksomheder med 10+ ansatte (n=200) |
+|---|---|---|
+| Regnskab fundet | – | 99 % (169 for 2025, 28 for 2026) |
+| Antal ansatte, resultat, egenkapital, aktiver | 78–100 % | 96 % |
+| Personaleomkostninger | 40 % | 92 % |
+| Bruttofortjeneste | 78 % | 87 % |
+| Immaterielle aktiver | 10 % | 50 % |
+| Aktiverede udviklingsomkostninger > 0 | 1 % | **30 %** |
+| Omsætning | 14 % | 14 % (35 % blandt 50+) |
+| FoU-omkostninger i resultatopgørelsen | 0 % | 0 % |
 
-| Variabel | Andel med værdi |
-|---|---|
-| Årets resultat, egenkapital, aktiver | 100 % |
-| Bruttofortjeneste | 78 % |
-| Gennemsnitligt antal ansatte | 78 % |
-| Personaleomkostninger | 40 % |
-| Omsætning | 14 % |
-| Immaterielle aktiver | 10 % |
-| Aktiverede udviklingsprojekter > 0 | 1 % |
-| FoU-omkostninger (resultatopgørelse) | 0 % |
+Andelen med aktiverede udviklingsomkostninger varierer på tværs af brancher:
 
-Alle 200 havde XBRL. Stikprøven er domineret af små selskaber (kun 7 havde
-10+ ansatte) og dækker alle brancher, så tallene er en nedre grænse for
-tech-virksomheder med 10+ ansatte – ikke et estimat for jeres population.
-Mønsteret er dog strukturelt: små og mellemstore selskaber må udelade
-omsætning og vise bruttofortjeneste, og også Nine A/S med 141 ansatte gør det.
-Aktivering af udviklingsomkostninger er et regnskabsvalg, så fravær betyder
-ikke fravær af udvikling.
+| Gruppe | n | Aktiverede udviklingsomk. > 0 |
+|---|---|---|
+| 26 Elektronik/optik | 20 | 55 % |
+| 58.2 Software | 19 | 53 % |
+| 63 It-infrastruktur | 13 | 38 % |
+| 62 It-programmering/-konsulent | 82 | 28 % |
+| 72.1 FoU | 16 | 19 % |
+| 71.12 Ingeniørrådgivning | 46 | 17 % |
 
-Konsekvens for designet: brug bruttofortjeneste, ansatte og
-personaleomkostninger pr. ansat som udfald og kontrolvariable, og behandl
-aktiverede udviklingsomkostninger som en indikator (ja/nej), ikke som et mål
-for FoU-intensitet. Mål dækningen igen på jeres egen population (trin 6 i
-README), før regressionsdesignet låses.
+Konsekvens for designet: brug **bruttofortjeneste, antal ansatte og
+personaleomkostninger pr. ansat** som udfald og kontrolvariable, og brug
+**aktiverede udviklingsomkostninger som ja/nej-indikator** for
+udviklingsaktivitet. Det er et regnskabsvalg, så et nej betyder ikke, at
+virksomheden ikke udvikler. Omsætning kan ikke bruges som hovedvariabel.
 
 ## GDPR og etik
 - Personligt ejede virksomheder (ENK, PMV, I/S) skrives ikke til datasættet;
   kun antal gemmes.
-- Navne, adresser og deltagere hentes ikke. E-mail reduceres til domæne.
-- Fra hjemmesider gemmes kun nøgletal. I den senere fulde scraping kommer der
-  tekst med personnavne (medarbejdersider, kontaktsider); det kræver en
-  særskilt beslutning om filtrering og opbevaring.
-- Reklamebeskyttelse hentes med som felt. Den forbyder ikke analyse, men
-  virksomhederne må ikke kontaktes i markedsføringsøjemed.
+- Navne, adresser og deltagere gemmes ikke. Navnebaseret søgning holder kun
+  navnet i hukommelsen under kørslen. E-mail reduceres til domæne.
+- Fra hjemmesider gemmes kun nøgletal. Den fulde scraping vil indsamle tekst
+  med personnavne (medarbejder- og kontaktsider); det kræver en særskilt
+  beslutning om filtrering og opbevaring.
+- Sæt `CONTACT_EMAIL` i `.env` før fuld scraping. Stikprøverne her er kørt
+  uden kontaktadresse i User-Agent.
 - Afklar med CBS, om behandlingen skal registreres (spørgsmål 10 til Hedman).
 
 ## Næste skridt
 
-| Hvem | Hvad | Hvornår |
-|---|---|---|
-| Jer | Læs datacvr-artiklen i en browser og send CVR-ansøgningen | I dag – 3-ugersfristen løber fra afsendelse |
-| Jer | Send spørgsmålene til Jonas Hedman; aftal møde | Denne uge |
-| Jer | Send DST-mailen, helst med Hedman cc | Efter mødet |
-| Jer | Kør trin 1–6 i README, når login er modtaget | Ca. en halv dag |
-| Jer | Udfyld dækningstabellen og afgør go/no-go | Senest 3 uger efter ansøgning |
-
-Hvis CVR-adgangen trækker ud, er der ingen god erstatning: regnskabsindekset
-er åbent, men indeholder hverken branchekode eller hjemmeside.
-System-til-system-adgangen er derfor projektets reelle flaskehals.
+| Hvem | Hvad |
+|---|---|
+| Jer | Skift CVR-password og kør lokalt over HTTPS (`:8443`) |
+| Jer | Send spørgsmålene til Jonas Hedman. Tag populationstallene og afgrænsningen til 10+ ansatte med |
+| Jer | Send DST-mailen, helst med Hedman cc – nu som udvidelse, ikke forudsætning |
+| Jer + Hedman | Beslut, om 58.2 (software), 61 og de militære koder skal med |
+| Næste fase | Byg hjemmesidesøgning (navnegæt + evt. søge-API), browser-rendering til JavaScript-sites og en flersproget klassifikationsmodel |
 
 ## Kilder
 - Erhvervsstyrelsen: [Kom godt igang med Elasticsearch](https://erhvervsstyrelsen.dk/kom-godt-igang-med-elasticSearch)
