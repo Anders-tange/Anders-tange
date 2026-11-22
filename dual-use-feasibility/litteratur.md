@@ -8,7 +8,7 @@ inden for hver gruppe er den, jeg vil foreslå at læse dem i.
 
 | # | Studie | Hvorfor | Adgang |
 |---|---|---|---|
-| 1 | IRIS Group for Erhvervsstyrelsen (2024): *Danmarks forsvarsindustrielle økosystem* | Den nyeste og mest detaljerede kortlægning af dansk forsvarsindustri: virksomhedstyper, kompetencer, barrierer. Nævner kommunikation/sensorer, cyber, AI og droner som prioriterede områder. Jeres vigtigste sammenligningspunkt – den bygger på survey og interviews, I bygger på registerdata og web-tekst | [Åben PDF](https://irisgroup.dk/wp-content/uploads/2024/02/Danmarks-forsvarsindustrielle-oekosystem.pdf) · [ERST-side](https://erhvervsstyrelsen.dk/danmarks-forsvarsindustrielle-oekosystem) |
+| 1 | IRIS Group for Erhvervsstyrelsen (2024): *Danmarks forsvarsindustrielle økosystem* | Den nyeste og mest detaljerede kortlægning af dansk forsvarsindustri: over 500 virksomheder i tre segmenter (kerne, øvrig forsvarsindustri, spin-in). Læs **bilag 1**: de har selv kombineret ERST-lister, CVR-udtræk og keyword-webscraping af hjemmesider. Jeres vigtigste sammenligningspunkt | [Åben PDF](https://irisgroup.dk/wp-content/uploads/2024/02/Danmarks-forsvarsindustrielle-oekosystem.pdf) · [ERST-side](https://erhvervsstyrelsen.dk/danmarks-forsvarsindustrielle-oekosystem) |
 | 2 | Kinne & Lenz (2021): *Predicting innovative firms using web mining and deep learning*. PLOS ONE 16(4) | Præcis jeres metode: træn en model på hjemmesidetekst for virksomheder med kendt status, og brug den på alle andre. Tyskland | [Åben](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8016297/) |
 | 3 | Kinne & Axenbeck (2020): *Web mining for innovation ecosystem mapping: a framework and a large-scale pilot study*. Scientometrics 125(3) | Rammeværk for at scrape 2,4 mio. tyske virksomheder koblet til registerdata, og et eksempel på at kortlægge AI-virksomheder i Berlin. Diskuterer skævhed i, hvem der har hjemmeside | [Åben](https://ideas.repec.org/a/spr/scient/v125y2020i3d10.1007_s11192-020-03726-9.html) · [ZEW-version](https://ftp.zew.de/pub/zew-docs/dp/dp18033.pdf) |
 | 4 | Gök, Waterworth & Shapira (2015): *Use of web mining in studying innovation*. Scientometrics 102(1) | Klassikeren om web mining som datakilde: styrker og svagheder (nøjagtighed, dækning, selvrapportering). God til metodekapitlet | [Åben](https://core.ac.uk/download/159074368.pdf) |
@@ -34,13 +34,30 @@ inden for hver gruppe er den, jeg vil foreslå at læse dem i.
 | Bromley & Maletta (2025): *Militarization of technology: preventing diversion and misuse through export controls*. SIPRI Research Policy Paper | Om at civile teknologier glider ind i dual-use-kategorien (eksempel: ansigtsgenkendelse). Godt til diskussionen af afgrænsning | [Åben PDF](https://www.sipri.org/sites/default/files/2025-11/rpp_2025_11_miltech.pdf) |
 | *A survey of dual-use issues* (IDA Paper P-3176) | Ældre amerikansk gennemgang af spin-off og spin-on: civile teknologier, der bruges militært. Begreberne skal I bruge | [Åben PDF](https://apps.dtic.mil/sti/tr/pdf/ADA309221.pdf) |
 
-## Hul i litteraturen
-Jeg har ikke fundet et studie, der kortlægger **dual-use-virksomheder** med
-web mining af hjemmesider – hverken i Danmark eller internationalt. De danske
-kortlægninger (IRIS 2024 m.fl.) bygger på surveys og interviews, og
-web mining-studierne handler om innovation generelt eller AI. Det er jeres
-bidrag. Søgningen var dog ikke udtømmende, så tjek det i Scopus eller Web of
-Science via CBS Library, før I skriver det i specialet.
+## Hvor jeres bidrag ligger
+**Rettelse:** IRIS Group (2024, bilag 1) har allerede brugt webscraping af
+hjemmesider. De lavede en liste med 34 forsvarsord (fx "defence",
+"militær", "navy", "våben") og søgte efter dem på hjemmesiderne hos
+virksomheder fra et CVR-udtræk på udvalgte branchekoder. Sites med mere end to
+fund blev valideret manuelt. Det supplerede lister fra Erhvervsstyrelsen,
+tidligere kortlægninger og medlemslister.
+
+Forskellen til jeres projekt – og dermed jeres bidrag – er:
+- **Hvad der måles.** IRIS søger efter virksomheder, der *taler om forsvar*.
+  I vil måle *teknologiske kompetencer* (sensorer, droner, AI, cyber ...),
+  som kan bruges militært – også hos virksomheder, der aldrig nævner forsvar.
+  Det er netop spin-in-potentialet, som IRIS selv skriver, at de kun har fanget
+  en delmængde af.
+- **Hvordan.** Ordlister med manuel validering over for en systematisk,
+  dokumenteret klassifikation, der kan gentages og valideres statistisk.
+- **Hele populationen.** Alle virksomheder i de valgte DB25-koder, koblet til
+  CVR- og regnskabsdata, så der kan laves regressioner.
+- **Validering.** IRIS' liste kan bruges som et facit at teste jeres metode
+  mod (se `drafts/04_mail_iris_group.md`).
+
+Jeg har ikke fundet andre studier, der kortlægger dual-use-virksomheder med
+web mining. Søgningen var ikke udtømmende, så tjek det i Scopus eller Web of
+Science via CBS Library.
 
 ## Forslag til søgning i CBS Library
 - `("web mining" OR "web scraping" OR "website text") AND (firm* OR compan*) AND (classif* OR innovat*)`
