@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import threading
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal, Optional
@@ -114,6 +115,7 @@ def nordnet_status() -> dict:
     Call this first if other tools return no data."""
     st = STATE.ensure()
     dates = [t.date for t in st.txs if t.date]
+    unknown = Counter(t.raw_type for t in pf.active(st.txs) if t.category == "other")
     return {
         "data_dir": str(st.data_dir),
         "files": st.file_report,
@@ -123,6 +125,7 @@ def nordnet_status() -> dict:
         "last_date": max(dates).isoformat() if dates else None,
         "price_sources": st.prices.names if st.prices else [],
         "base_currency": st.base_currency,
+        "unrecognized_transaction_types": dict(unknown.most_common()),
         "warnings": st.warnings,
     }
 

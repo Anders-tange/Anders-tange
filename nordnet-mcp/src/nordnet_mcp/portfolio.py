@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Iterable, Optional
 
-from .parser import Transaction
+from .parser import Transaction, direction
 
 QTY_IN = {"buy", "security_in", "dividend_reinvest"}
-QTY_OUT = {"sell", "security_out"}
+QTY_OUT = {"sell", "security_out", "redemption"}
 EPS = 1e-9
 
 
@@ -89,11 +89,23 @@ class Position:
         }
 
 
+def _sort_key(t: Transaction):
+    # On the same day, outgoing legs of corporate actions/transfers go before incoming ones,
+    # so the cost basis can be carried over to the new line.
+    out_first = 0 if t.category in ("corporate_action", "security_out") and direction(t.raw_type) == "out" else 1
+    return (t.date or date.min, out_first)
+
+
 def build_positions(txs: list[Transaction]) -> dict[tuple[str, str], Position]:
     """Replay transactions chronologically to get positions and realized gains."""
     currencies = account_currency(txs)
     positions: dict[tuple[str, str], Position] = {}
-    for t in active(txs):
+    # cost carried from an outgoing corporate-action leg to the incoming one (same account + day)
+    corp_pool: dict[tuple[str, Optional[date]], float] = defaultdict(float)
+    # cost carried from a security transfer out of one account into another (same ISIN + quantity)
+    transfer_pool: dict[tuple[str, float], list[float]] = defaultdict(list)
+
+    for t in sorted(active(txs), key=_sort_key):  # stable: keeps file order within a day
         if not t.isin:
             continue
         key = (t.account, t.isin)
@@ -107,8 +119,24 @@ def build_positions(txs: list[Transaction]) -> dict[tuple[str, str], Position]:
 
         q = abs(t.quantity) if t.quantity is not None else 0.0
         before = pos.quantity
+        avg = pos.cost_basis / before if before > EPS else 0.0
 
-        if t.category in QTY_IN:
+        if t.category == "corporate_action":
+            d = direction(t.raw_type)
+            new_qty = abs(t.total_quantity) if t.total_quantity is not None else (
+                before - q if d == "out" else before + q if d == "in" else before)
+            if d == "out" and new_qty <= EPS:
+                corp_pool[(t.account, t.date)] += pos.cost_basis  # whole line converted
+                pos.cost_basis = 0.0
+            elif d == "in" and before <= EPS:
+                pos.cost_basis += corp_pool.pop((t.account, t.date), 0.0)
+            elif d == "out":
+                moved = avg * (before - new_qty)
+                corp_pool[(t.account, t.date)] += moved
+                pos.cost_basis -= moved
+            pos.quantity = max(new_qty, 0.0)
+
+        elif t.category in QTY_IN:
             if t.category == "buy":
                 if t.amount is not None:
                     cost = abs(t.amount)
@@ -117,29 +145,34 @@ def build_positions(txs: list[Transaction]) -> dict[tuple[str, str], Position]:
                 else:
                     cost = 0.0
                     pos.cost_unknown = True
-            elif t.purchase_value is not None:
+            elif t.purchase_value:
                 cost = abs(t.purchase_value)
-            elif t.category == "dividend_reinvest" and t.amount is not None:
+            elif t.category == "security_in" and transfer_pool.get((t.isin, round(q, 6))):
+                cost = transfer_pool[(t.isin, round(q, 6))].pop(0)  # moved from another own account
+            elif t.amount:
                 cost = abs(t.amount)
             else:
                 cost = 0.0
                 pos.cost_unknown = True
             pos.cost_basis += cost
             pos.quantity = before + q
-            if t.price is not None:
+            if t.price:
                 pos.last_trade_price, pos.last_trade_date = t.price, t.date
+
         elif t.category in QTY_OUT:
-            avg = pos.cost_basis / before if before > EPS else 0.0
-            sold_cost = avg * min(q, before) if before > EPS else 0.0
+            sold_cost = avg * min(q, before)
             pos.cost_basis -= sold_cost
             pos.quantity = max(before - q, 0.0)
-            if t.category == "sell":
+            if t.category == "security_out" and not t.amount:
+                transfer_pool[(t.isin, round(q, 6))].append(sold_cost)
+            else:  # sell, redemption, or a security leaving with a cash amount
                 proceeds = abs(t.amount) if t.amount is not None else q * (t.price or 0.0) * (t.fx_rate or 1.0)
                 pos.realized.append({
                     "date": t.date.isoformat() if t.date else None,
                     "account": t.account,
                     "name": pos.name,
                     "isin": t.isin,
+                    "type": t.raw_type,
                     "quantity": q,
                     "price": t.price,
                     "proceeds": round(proceeds, 2),
@@ -149,7 +182,7 @@ def build_positions(txs: list[Transaction]) -> dict[tuple[str, str], Position]:
                     "currency": pos.currency,
                     **({"warning": "Sold more than known holding — export may be missing older transactions"} if q > before + EPS else {}),
                 })
-            if t.price is not None:
+            if t.price:
                 pos.last_trade_price, pos.last_trade_date = t.price, t.date
 
         # Nordnet's own running quantity is authoritative when present. This also

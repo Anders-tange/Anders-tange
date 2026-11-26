@@ -36,7 +36,7 @@ def test_tools_are_registered(server):
 
 def test_status(server):
     s = call(server, "nordnet_status")
-    assert s["transactions"] == 13 and s["accounts"] == ["12345678", "87654321"]
+    assert s["transactions"] == 14 and s["accounts"] == ["12345678", "87654321"]
     assert s["price_sources"] == ["manual"]
 
 
@@ -51,16 +51,16 @@ def test_holdings_with_manual_prices(server):
 
 def test_summary(server):
     s = call(server, "nordnet_portfolio_summary")
-    assert s["cash"] == 33181
+    assert s["cash"] == 33013.25
     assert s["holdings_value"] == pytest.approx(63000 + 17500 + 9000)
     assert s["net_deposited"] == 75000
-    assert s["total_return"] == pytest.approx(63000 + 17500 + 9000 + 33181 - 75000)
+    assert s["total_return"] == pytest.approx(63000 + 17500 + 9000 + 33013.25 - 75000)
 
 
 def test_transactions_pagination_and_filters(server):
     t = call(server, "nordnet_get_transactions", limit=5)
-    assert t["total"] == 12 and t["count"] == 5 and t["has_more"] and t["next_offset"] == 5
-    assert t["transactions"][0]["id"] == "1011"  # newest first
+    assert t["total"] == 13 and t["count"] == 5 and t["has_more"] and t["next_offset"] == 5
+    assert t["transactions"][0]["id"] == "2003"  # newest first
     novo = call(server, "nordnet_get_transactions", query="novo", category="buy")
     assert novo["total"] == 2
 
@@ -78,3 +78,33 @@ def test_missing_data_dir(monkeypatch, tmp_path):
     srv.STATE.__init__()
     out = call(srv, "nordnet_get_holdings")
     assert "error" in out and "how_to_fix" in out
+
+
+def test_setup_cli_writes_desktop_config(tmp_path, monkeypatch, capsys, data_dir):
+    from nordnet_mcp import setup_cli
+
+    cfg = tmp_path / "Claude" / "claude_desktop_config.json"
+    cfg.parent.mkdir()
+    cfg.write_text('{"mcpServers": {"bankmcp": {"command": "bank"}}, "other": 1}')
+    monkeypatch.setattr(setup_cli, "desktop_config_path", lambda: cfg)
+    monkeypatch.setattr(setup_cli, "server_command", lambda: "/x/nordnet-mcp")
+    monkeypatch.setattr("sys.argv", ["nordnet-mcp-setup", "--data-dir", str(tmp_path / "nn")])
+    setup_cli.main()
+    out = json.loads(cfg.read_text())
+    assert out["mcpServers"]["bankmcp"] == {"command": "bank"}  # existing servers kept
+    assert out["mcpServers"]["nordnet"]["command"] == "/x/nordnet-mcp"
+    assert out["mcpServers"]["nordnet"]["env"]["NORDNET_DATA_DIR"] == str((tmp_path / "nn").resolve())
+    assert out["other"] == 1
+    assert list(cfg.parent.glob("*.backup-*"))
+    assert (tmp_path / "nn").is_dir()
+
+
+def test_setup_cli_check(monkeypatch, capsys, data_dir):
+    from nordnet_mcp import setup_cli
+
+    monkeypatch.setattr("sys.argv", ["nordnet-mcp-setup", "--check", "--data-dir", str(data_dir)])
+    with pytest.raises(SystemExit) as exc:
+        setup_cli.main()
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert "Novo Nordisk" in out and "14 transaktioner" in out

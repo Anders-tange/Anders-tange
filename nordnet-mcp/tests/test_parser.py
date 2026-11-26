@@ -8,6 +8,11 @@ def test_parse_number_nordic_formats():
     assert parse_number("−3,2") == -3.2
     assert parse_number("") is None
     assert parse_number("abc") is None
+    # Nordnet DK uses "." for thousands: with the file's decimal separator known, 2.500 is 2500
+    assert parse_number("2.500", ",") == 2500
+    assert parse_number("-2.482,35", ",") == -2482.35
+    assert parse_number("1.877.030", None) == 1877030
+    assert parse_number("1,234.5", None) == 1234.5
 
 
 def test_classify_type_languages():
@@ -22,13 +27,18 @@ def test_classify_type_languages():
     assert classify_type("INDBETALING") == "deposit"
     assert classify_type("HÆVNING") == "withdrawal"
     assert classify_type("DEBETRENTE") == "interest"
-    assert classify_type("SPLIT") == "other"
+    assert classify_type("SPLIT") == "corporate_action"
+    assert classify_type("NOSTO") == "withdrawal"  # not "osto" (buy)
+    assert classify_type("SKATTEINDBETALING ASK") == "tax"
+    assert classify_type("INLÄGG VP") == "security_in"
+    assert classify_type("INLÖSEN UTTAG VP") == "redemption"
+    assert classify_type("TECKNING LIKVID") == "other"
 
 
 def test_load_utf16_export(data_dir):
     txs, report = load_directory(data_dir)
     assert report[0]["status"] == "ok"
-    assert len(txs) == 13
+    assert len(txs) == 14
     first = txs[0]
     assert first.id == "1001"
     assert first.amount == 50000
@@ -36,14 +46,15 @@ def test_load_utf16_export(data_dir):
     assert first.category == "deposit"
     buy = next(t for t in txs if t.id == "1008")
     assert buy.fx_rate == 6.9 and buy.isin == "US0378331005"
+    assert buy.amount == -13832.25 and buy.price == 200.25 and buy.balance == 37175.75
     assert next(t for t in txs if t.id == "1010").cancel_date is not None
 
 
 def test_duplicate_files_are_deduplicated(data_dir):
     (data_dir / "copy.csv").write_bytes((data_dir / "transaktioner.csv").read_bytes())
     txs, report = load_directory(data_dir)
-    assert len(txs) == 13
-    assert sorted(r["new_rows"] for r in report) == [0, 13]
+    assert len(txs) == 14
+    assert sorted(r["new_rows"] for r in report) == [0, 14]
 
 
 def test_swedish_semicolon_utf8():

@@ -66,29 +66,78 @@ DATE_FIELDS = {"booking_date", "trade_date", "settlement_date", "cancel_date"}
 
 
 # --- transaction type classification -------------------------------------
+# Real Nordnet types seen in exports, e.g. DK: KØBT, SOLGT, INDBETALING, INDSÆTTELSE,
+# HÆVNING, UDBYTTE, UDBYTTESKAT, AFKASTSKAT ASK, SKATTEINDBETALING ASK, KREDITRENTE,
+# GEBYR MÅNEDSOPSPARING. SE: KÖPT, SÅLT, INLÄGG, UTTAG, UTDELNING, UTL KUPSKATT,
+# INLÄGG VP, UTTAG VP, SPLIT INLÄGG VP, SPLIT UTTAG VP, TECKNING ..., INLÖSEN UTTAG VP.
+
+_IN_WORDS = ("inlägg", "indsæt", "indbet", "indlev", "innskudd", "innlev", "innbet", "inleverans", "insättning", "talletus", "deposit", "transfer in")
+_OUT_WORDS = ("uttag", "uttak", "udlev", "udtag", "hævning", "utlev", "utleverans", "udbetaling", "utbetaling", "nosto", "withdraw", "transfer out")
+_VP_RE = re.compile(r"\b(vp|værdipapir\w*|värdepapper\w*|verdipapir\w*|arvopaperi\w*|securities)\b")
+
 # Order matters: more specific keywords first (e.g. "udbytteskat" before "udbytte").
-_TYPE_RULES: list[tuple[str, tuple[str, ...]]] = [
-    ("dividend_tax", ("udbytteskat", "kuponskat", "kupongskatt", "kupskatt", "kupongskat", "lähdevero", "withholding", "utl kupskatt")),
+_PRE_RULES: list[tuple[str, tuple[str, ...]]] = [
+    ("corporate_action", ("split", "omvandling", "omdannelse", "byte", "fusion", "sammenlægning", "sammanläggning",
+                          "spin-off", "spinoff", "ombytning", "konvertering", "omstempling", "sulautuminen")),
+    ("redemption", ("inlösen", "indfrielse", "indløsning", "udtrækning", "innløsning", "lunastus", "redemption")),
+    ("dividend_tax", ("udbytteskat", "kuponskat", "kupongskatt", "kupskatt", "kupongskat", "kildeskat", "lähdevero", "withholding")),
     ("dividend_reinvest", ("udb. geninvest", "återinvest", "reinvest")),
     ("dividend", ("udbytte", "utdelning", "utbytte", "osinko", "dividend")),
-    ("buy", ("købt", "køb", "köpt", "köp", "kjøpt", "kjøp", "osto", "buy", "bought")),
-    ("sell", ("solgt", "sålt", "salg", "sälj", "myynti", "sell", "sold")),
-    ("deposit", ("indbetaling", "insättning", "innskudd", "innbetaling", "talletus", "deposit")),
-    ("withdrawal", ("hævning", "udbetaling", "uttag", "uttak", "utbetaling", "nosto", "withdrawal")),
-    ("security_in", ("indlevering", "indlev.", "inleverans", "innlevering", "luovutus sisään", "transfer in", "emission")),
-    ("security_out", ("udlevering", "udlev.", "utleverans", "utlevering", "transfer out")),
-    ("interest", ("debetrente", "kreditrente", "rente", "ränta", "renter", "korko", "interest")),
-    ("tax", ("skat", "skatt", "vero", "tax")),
+    # tax payments whose names also contain "indbetaling"/"inbetalning"
+    ("tax", ("skatteindbetaling", "skatteinbetalning", "afkastskat", "kapitalskat", "lagerbeskat", "preliminärskatt")),
+]
+_SUBSCRIPTION_WORDS = ("teckning", "tegning", "tilldelning", "tildeling", "emission", "merkintä")
+_POST_RULES: list[tuple[str, tuple[str, ...]]] = [
+    ("buy", ("købt", "køb", "köpt", "köp", "kjøpt", "kjøp", "osto", "bought", "buy")),
+    ("sell", ("solgt", "sålt", "salg", "sälj", "myyty", "myynti", "sold", "sell")),
+    ("interest", ("debetrente", "kreditrente", "rente", "ränta", "korko", "kupong", "kupon", "interest")),
     ("fee", ("gebyr", "avgift", "afgift", "kulu", "fee")),
+    ("tax", ("skat", "skatt", "kildeskat", "vero", "tax")),
     ("fx", ("valutaveksling", "valutaväxling", "valuutanvaihto", "currency exchange")),
 ]
 
 
+def _has(text: str, keywords: tuple[str, ...]) -> bool:
+    """Substring match; short keywords (<= 5 chars) must start a word ('osto' must not hit 'nosto')."""
+    for k in keywords:
+        if len(k) <= 5:
+            if re.search(r"(?<!\w)" + re.escape(k), text):
+                return True
+        elif k in text:
+            return True
+    return False
+
+
+def direction(raw_type: str) -> Optional[str]:
+    """'in' / 'out' for types that move securities or cash in or out of an account, else None."""
+    t = _norm(raw_type)
+    if any(w in t for w in _OUT_WORDS) or re.search(r"\b(ut|ud)\b", t):
+        return "out"
+    if any(w in t for w in _IN_WORDS) or re.search(r"\b(in|ind)\b", t):
+        return "in"
+    return None
+
+
 def classify_type(raw_type: str) -> str:
     t = _norm(raw_type)
-    for category, keywords in _TYPE_RULES:
-        if any(k in t for k in keywords):
+    for category, keywords in _PRE_RULES:
+        if _has(t, keywords):
             return category
+    if _has(t, _SUBSCRIPTION_WORDS):
+        # TECKNING LIKVID is the cash leg of a subscription: no effect on holdings
+        if "likvid" in t:
+            return "other"
+        return "security_out" if direction(raw_type) == "out" else "security_in"
+    if _VP_RE.search(t) and direction(raw_type):
+        return "security_in" if direction(raw_type) == "in" else "security_out"
+    for category, keywords in _POST_RULES:
+        if _has(t, keywords):
+            return category
+    d = direction(raw_type)
+    if d == "in":
+        return "deposit"
+    if d == "out":
+        return "withdrawal"
     return "other"
 
 
@@ -150,26 +199,52 @@ class Transaction:
 
 # --- value parsing --------------------------------------------------------
 
-def parse_number(value: str) -> Optional[float]:
-    """Parse Nordic-formatted numbers: '1 234,56', '-1.234,56', '1234.56', '−3,2'."""
+_THOUSANDS_DOT = re.compile(r"^-?\d{1,3}(\.\d{3})+$")
+_THOUSANDS_COMMA = re.compile(r"^-?\d{1,3}(,\d{3})+$")
+
+
+def parse_number(value: str, decimal: Optional[str] = None) -> Optional[float]:
+    """Parse Nordic/English numbers: '1 234,56', '-2.482,35', '2.500', '1234.56', '−3,2'.
+
+    `decimal` is the file's decimal separator ("," or "."). Nordnet's Nordic exports use
+    "," for decimals and "." for thousands, so '2.500' means 2500. When `decimal` is None
+    it is guessed per value.
+    """
     if value is None:
         return None
-    s = value.strip().replace(" ", "").replace(" ", "").replace(" ", "")
-    s = s.replace("−", "-")  # unicode minus
+    s = value.strip().replace("\u00a0", "").replace("\u202f", "").replace(" ", "").replace("'", "")
+    s = s.replace("\u2212", "-")  # unicode minus
     if s in ("", "-", "--"):
         return None
     if "," in s and "." in s:
         # whichever comes last is the decimal separator
-        if s.rfind(",") > s.rfind("."):
-            s = s.replace(".", "").replace(",", ".")
-        else:
-            s = s.replace(",", "")
+        dec = "," if s.rfind(",") > s.rfind(".") else "."
+    elif decimal:
+        dec = decimal
     elif "," in s:
-        s = s.replace(",", ".")
+        dec = "." if _THOUSANDS_COMMA.match(s) and s.count(",") > 1 else ","
+    elif "." in s:
+        dec = "," if _THOUSANDS_DOT.match(s) and s.count(".") > 1 else "."
+    else:
+        dec = "."
+    thousands = "." if dec == "," else ","
+    s = s.replace(thousands, "").replace(dec, ".")
     try:
         return float(s)
     except ValueError:
         return None
+
+
+def detect_decimal(values: list[str]) -> str:
+    """Guess a file's decimal separator from its numeric cells (Nordnet default: ',')."""
+    comma = dot = 0
+    for v in values:
+        v = v.strip()
+        if re.search(r",\d{1,2}$|,\d{4,}$", v):
+            comma += 1
+        elif re.search(r"\.\d{1,2}$|\.\d{4,}$", v):
+            dot += 1
+    return "." if dot > comma else ","
 
 
 _DATE_FORMATS = ("%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%Y/%m/%d", "%Y.%m.%d")
@@ -249,6 +324,9 @@ def parse_text(text: str, source_file: str = "") -> list[Transaction]:
             f"Headers seen: {headers[:12]}"
         )
 
+    numeric_idx = [i for i, c in mapping.items() if c in NUMERIC_FIELDS]
+    decimal = detect_decimal([r[i] for r in rows[1:200] for i in numeric_idx if i < len(r)])
+
     out: list[Transaction] = []
     for n, row in enumerate(rows[1:], start=2):
         if not any(cell.strip() for cell in row):
@@ -259,7 +337,7 @@ def parse_text(text: str, source_file: str = "") -> list[Transaction]:
                 rec[canon] = row[idx].strip()
 
         def num(name: str) -> Optional[float]:
-            return parse_number(rec.get(name, ""))
+            return parse_number(rec.get(name, ""), decimal)
 
         raw_type = rec.get("type", "")
         tx = Transaction(
