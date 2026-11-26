@@ -2,7 +2,13 @@
 
 En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (Claude) bestemmer arten. Første gang du fanger en art, bliver den registreret med sit nummer, og silhuetten i Dyredex'en bliver til dit eget billede.
 
-**Live version:** https://claude.ai/artifact/5Ezc6rr2SdyGsGF4NBZ2AC
+**I Claude:** https://claude.ai/artifact/5Ezc6rr2SdyGsGF4NBZ2AC
+**Som app (efter GitHub Pages er slået til, se nedenfor):** `https://anders-tange.github.io/anders-tange/dyredex/web/`
+
+Dyredex findes i to udgaver, bygget fra den samme kode i `src/`:
+
+- **Claude-udgaven** (`index.html`) kører som artifact. Data og billeder ligger hos Claude, AI'en er Claude, og venner kan være med.
+- **App-udgaven** (`web/`) kører uden Claude, også uden net. Data og billeder ligger på telefonen, og AI'en kører med din egen API-nøgle fra Anthropic. Den kan lægges på hjemmeskærmen som en app, og den samme mappe kan pakkes til App Store med Capacitor.
 
 ## Sådan virker det
 
@@ -28,9 +34,36 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 - **Sted og tid:** GPS-position og optagelsestidspunkt læses fra billedets EXIF-data (JPEG og WebP), før billedet gøres mindre. De sendes med til AI'en som hjælp til at bestemme arten, og stedet får et navn. Mangler billedet GPS, kan du skrive stedet selv.
 - **Betjening:** SCAN-knappen vælger billeder (flere ad gangen). Du kan også trække dem ind eller sætte ind med Ctrl+V. D-pad'en og piletasterne bladrer i dex'en.
 
+- **Backup og flyt til app:** Under Trænere gemmer "Gem backup" hele samlingen med billeder i én JSON-fil, og "Indlæs backup" lægger den ind igen. Fund, du allerede har, springes over, så samme fil kan indlæses flere gange. Det er også sådan, du flytter dine dyr fra Claude til appen (eller tilbage).
+
 ## Teknik
 
-`index.html` er én fil med HTML, CSS og JavaScript uden byggetrin. Den kører som Claude-artifact og bruger tre funktioner fra artifact-runtime:
+```
+src/
+  app.js              selve appen; får en platform og bruger kun den til data, billeder, AI og oplæsning
+  app.css, body.html  udseende og opmærkning
+  head.html           skrifttyper
+  backup.js           backup ind og ud
+  main-claude.js      indgang for Claude-udgaven
+  main-web.js         indgang for app-udgaven (indstillinger for AI og installation, service worker)
+  platform/
+    claude.js         Claude-runtime: claude.use(...), billeder på /_blob/<id>, filer via downloads
+    local.js          samme API på telefonen: IndexedDB til dokumenter og billeder, talesyntese til oplæsning
+    ai.js             AI med brugerens egen nøgle via @anthropic-ai/sdk
+assets/icons/         app-ikoner (make_icons.py tegner dem)
+build.mjs             bygger index.html og web/
+```
+
+Byg efter ændringer i `src/` (Node 20+):
+
+```
+npm install
+npm run build
+```
+
+Byggetrinnet laver `index.html` (artifact, uændret adresse) og `web/` med `index.html`, `manifest.webmanifest`, `sw.js` (offline) og ikoner. Begge er tjekket ind, så de kan bruges uden at bygge.
+
+### Claude-udgaven
 
 | Funktion | Bruges til |
 | --- | --- |
@@ -39,7 +72,24 @@ En Pokédex for rigtige dyr. Tag et billede af et dyr, smid det ind, og AI'en (C
 | `db` | Trænere (`players`), hver træners fund (`players/<id>/sightings`), rejse-dexer (`dexes`) og specialangreb (`specials`) |
 | `user` | Hvem der kigger, så hver træner får sin egen samling og sit navn på ranglisten |
 | `tts` | Oplæsning af dyretekster og kampe |
+| `downloads` | Gem backup som fil |
 
-Kataloget ligger i `RAW` øverst i scriptet som linjer på formen `Navn|Latinsk navn|gruppekode|emoji`. Emojien vises som silhuet, indtil dyret er fanget. Fund matches til kataloget på det latinske navn.
+### App-udgaven
 
-Åbner du filen direkte i en browser uden for Claude, virker den stadig, men uden AI og uden at gemme.
+- **Data:** samme dokumentstruktur som i Claude, men i IndexedDB på enheden. Der er én træner pr. enhed, og venner kræver en server senere.
+- **AI:** `@anthropic-ai/sdk` direkte fra browseren med brugerens egen nøgle (Trænere → AI-genkendelse). Standardmodellen er Claude Opus 5.5; Sonnet 5.5 og Haiku 5.5 kan vælges. Afviser modellen et billede, prøves det automatisk igen på Anthropics anbefalede reservemodel (`fallbacks: "default"`), dog ikke på Haiku, som ikke har en. Nøglen ligger kun i telefonens lokale lager. Det er fint til eget brug og test, men en offentlig app skal have en server, der holder nøglen, før den udgives.
+- **Offline:** service workeren gemmer appen, så den åbner uden net. Scanning med AI kræver net.
+
+### Hosting med GitHub Pages
+
+Repository → Settings → Pages → Source: *Deploy from a branch*, vælg branch og mappen `/ (root)`. Appen ligger så på `https://<bruger>.github.io/<repo>/dyredex/web/`. Åbn adressen på telefonen og vælg *Føj til hjemmeskærm* (Safari) eller *Installér app* (Chrome).
+
+### Vejen til App Store
+
+1. `npm install @capacitor/core @capacitor/cli @capacitor/ios` og `npx cap init Dyredex dk.<navn>.dyredex --web-dir web`.
+2. `npx cap add ios`, derefter `npm run build && npx cap sync` efter hver ændring.
+3. Åbn projektet i Xcode (`npx cap open ios`), vælg dit Apple Developer-team og kør på telefonen eller send til TestFlight.
+
+Det kræver en Mac med Xcode og et Apple Developer-medlemskab. Før appen udgives offentligt, skal AI-kaldene gå gennem en server i stedet for brugerens egen nøgle.
+
+Kataloget ligger i `RAW` i `src/app.js` som linjer på formen `Navn|Latinsk navn|gruppekode|emoji`. Emojien vises som silhuet, indtil dyret er fanget. Fund matches til kataloget på det latinske navn.

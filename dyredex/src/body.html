@@ -1,0 +1,119 @@
+
+<div class="outer">
+  <div class="device" id="device">
+    <header class="top">
+      <div class="lens" id="lens" aria-hidden="true"></div>
+      <div class="leds" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="brand">
+        <h1>Dyredex</h1>
+        <p>Fotografér dyr, scan dem og fang dem alle.</p>
+      </div>
+      <div class="counter" aria-live="polite">
+        <span class="big" id="c-big">000<small>/000</small></span>
+        <span class="meter"><i id="c-meter" style="width:0%"></i></span>
+        <span class="lbl" id="c-lbl">FANGET</span>
+      </div>
+    </header>
+    <p class="notice" id="notice" hidden></p>
+
+    <section class="tray" id="tray" hidden aria-label="Scanner">
+      <div class="tray-head" id="tray-head"></div>
+      <div id="queue" style="display:grid;gap:10px" aria-live="polite"></div>
+    </section>
+
+    <div class="halves">
+      <section class="left" aria-label="Valgt dyr">
+        <button class="btn ink sheet-close" id="sheetclose">✕ Luk</button>
+        <div class="bezel">
+          <div class="lcd" id="viewer"></div>
+          <span class="speaker" aria-hidden="true"></span>
+        </div>
+        <div class="controls">
+          <button class="scanbtn" id="scanbtn" aria-label="Scan billeder">SCAN</button>
+          <div class="pills" aria-hidden="true"><span></span><span></span></div>
+          <div class="dpad" role="group" aria-label="Bladr i Dyredex">
+            <button class="u" data-nav="-cols" aria-label="Op">▲</button>
+            <button class="l" data-nav="-1" aria-label="Forrige">◀</button>
+            <i></i>
+            <button class="r" data-nav="1" aria-label="Næste">▶</button>
+            <button class="d" data-nav="cols" aria-label="Ned">▼</button>
+          </div>
+        </div>
+        <div class="album">
+          <button class="btn blue" id="albumbtn">Importér fotoalbum</button>
+          <p>Vælg mange billeder på én gang. Nye arter registreres automatisk, og dyr du allerede har, springes over.</p>
+        </div>
+        <div class="place">
+          <label for="default-place">Sted for billeder uden GPS</label>
+          <input id="default-place" placeholder="Fx Dyrehaven, Klampenborg (valgfrit)" autocomplete="off">
+          <label for="setting">Hvor er dyrene fotograferet?</label>
+          <select id="setting"><option value="">Ved ikke / blandet</option><option value="vild">Vildt i naturen</option><option value="zoo">Zoo, akvarium eller dyrepark</option><option value="hjem">Kæledyr eller husdyr</option></select>
+        </div>
+        <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <input type="file" id="albumfile" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <input type="file" id="morefile" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      </section>
+
+      <section class="right" aria-label="Dyredex">
+        <div class="help" id="help" hidden>
+          <h3>Sådan spiller du Dyredex</h3>
+          <ol>
+            <li>Tryk <b>SCAN</b> og vælg et billede af et dyr. AI'en finder arten.</li>
+            <li>Registrér dyret, så låser det op. Silhuetterne viser, hvad du mangler.</li>
+            <li>Har du mange gamle billeder? Brug <b>Importér fotoalbum</b>.</li>
+            <li>Sæt flere dyr op mod hinanden i <b>Battle</b>, og se dem kæmpe. Sammenlign med venner under <b>Trænere</b>.</li>
+          </ol>
+          <div><button class="btn sm" id="helpok">Forstået</button></div>
+        </div>
+        <div class="viewing" id="viewing" hidden></div>
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="dex" aria-selected="true">Dyredex</button>
+          <button role="tab" data-tab="battle" aria-selected="false">Battle</button>
+          <button role="tab" data-tab="badges" aria-selected="false">Badges <span class="count" id="badge-count"></span></button>
+          <button role="tab" data-tab="trainers" aria-selected="false">Trænere</button>
+        </div>
+        <div class="badges" id="badges" hidden></div>
+        <div class="battle" id="battle" hidden></div>
+        <div class="trainers-view" id="trainers" hidden style="display:grid;gap:10px"></div>
+        <div id="view-dex" style="display:grid;gap:14px">
+        <div class="care" id="care" hidden></div>
+        <div class="missions" id="missions" hidden></div>
+        <div class="keys" id="keys" role="group" aria-label="Vælg region"></div>
+        <div class="stripbar" id="strip"></div>
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Vis">
+            <button data-show="alle" aria-pressed="true">Alle</button>
+            <button data-show="fanget" aria-pressed="false">Fanget</button>
+            <button data-show="mangler" aria-pressed="false">Mangler</button>
+            <button data-show="usikre" aria-pressed="false">Usikre</button>
+          </div>
+          <div class="search"><input id="q" type="search" placeholder="Søg navn eller latin…" aria-label="Søg"></div>
+          <select id="sort" aria-label="Sortér"><option value="mine">Fanget først</option><option value="nr">Nummer</option><option value="kk">Kampkraft</option><option value="rarity">Sjældenhed</option><option value="lv">Level</option><option value="recent">Nyeste</option></select>
+          <label class="toggle"><input type="checkbox" id="shownames"> Vis navne</label>
+        </div>
+        <div class="dex" id="dex"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<nav class="bnav" id="bnav" aria-label="Navigation">
+  <button data-tab="dex" aria-selected="true">Dyredex</button>
+  <button data-tab="battle" aria-selected="false">Battle</button>
+  <button class="scan" id="navscan" aria-label="Scan et dyr">SCAN</button>
+  <button data-tab="badges" aria-selected="false">Badges</button>
+  <button data-tab="trainers" aria-selected="false">Trænere</button>
+</nav>
+<div class="scansheet" id="scansheet" hidden>
+  <div class="ss-panel" role="dialog" aria-modal="true" aria-label="Tilføj dyr">
+    <h3>Tilføj dyr</h3>
+    <button class="btn" id="sheetscan">Tag eller vælg billeder</button>
+    <button class="btn blue" id="sheetalbum">Importér fotoalbum</button>
+    <p>Fotoalbum: vælg mange billeder på én gang. Nye arter registreres automatisk, og dyr du allerede har, springes over.</p>
+    <div id="ss-place"></div>
+    <button class="btn ghost-dark" id="sheetcancel">Luk</button>
+  </div>
+</div>
+<div id="unlock-root"></div>
+<div class="toast" id="toast" role="status" hidden></div>
