@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nordnet-mcp"
+version = "0.1.0"
+description = "MCP server for your Nordnet portfolio, built from Nordnet CSV exports, with delayed prices"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "mcp>=1.2,<2",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+yahoo = ["yfinance>=0.2.50"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+nordnet-mcp = "nordnet_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
